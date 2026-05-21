@@ -79,6 +79,7 @@ function runOperator(toolPath, env = {}) {
     encoding: 'utf8',
     env: {
       ...process.env,
+      GITHUB_ACTIONS: 'false',
       PATH: `${toolPath}:${process.env.PATH}`,
       OAUTH_HOST: 'localhost',
       ...env,
