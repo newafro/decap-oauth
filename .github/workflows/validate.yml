@@ -23,3 +23,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Validate deploy-config preflight
+        env:
+          GITHUB_OAUTH_ID: ci-client-id
+          GITHUB_OAUTH_SECRET: ci-client-secret
+          PUBLIC_URL: https://decap-oauth.newafro.com
+          GITHUB_REPO_PRIVATE: "0"
+          RENDER_CUSTOM_DOMAIN_TARGET: newafro-decap-oauth.onrender.com
+        run: npm run check:deploy-config

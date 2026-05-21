@@ -91,6 +91,22 @@ This repository includes `render.yaml`.
 The exact CNAME target comes from Render after the custom domain is added. Do
 not guess it.
 
+Before changing Namecheap, run the deploy-config preflight with the exact
+Render target:
+
+```bash
+GITHUB_OAUTH_ID=[from GitHub OAuth app] \
+GITHUB_OAUTH_SECRET=[from GitHub OAuth app] \
+PUBLIC_URL=https://decap-oauth.newafro.com \
+GITHUB_REPO_PRIVATE=0 \
+RENDER_CUSTOM_DOMAIN_TARGET=[exact Render DNS target] \
+npm run check:deploy-config
+```
+
+The command prints the exact Namecheap record and fails if a common mistake is
+present, for example using `newafro.github.io`, including `https://`, setting
+the wrong `PUBLIC_URL`, or leaving OAuth credentials blank.
+
 ## Local Test
 
 ```bash

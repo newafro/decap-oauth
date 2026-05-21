@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "node src/server.js",
+    "check:deploy-config": "node scripts/check-deploy-config.mjs",
     "check:live": "node scripts/check-live-readiness.mjs",
     "test": "node --test"
   }
