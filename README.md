@@ -131,6 +131,16 @@ Use the exact Render custom-domain DNS target as the workflow input. The
 workflow prints the Namecheap `decap-oauth` CNAME value without exposing the
 OAuth secret.
 
+After the secrets and DNS are in place, the operator access preflight can also
+be run from GitHub:
+
+```text
+https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml
+```
+
+It verifies the DNS and that the workflow can read the OAuth repository
+secrets without printing their values.
+
 ## Local Test
 
 ```bash

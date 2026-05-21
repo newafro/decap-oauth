@@ -9,6 +9,7 @@ const host = process.env.OAUTH_HOST || 'decap-oauth.newafro.com';
 const requiredSecrets = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET'];
 const failures = [];
 const warnings = [];
+const placeholders = new Set(['dummy', 'example', 'changeme', 'todo']);
 
 function section(title) {
   console.log(`\n== ${title} ==`);
@@ -26,6 +27,15 @@ function fail(message) {
 function warn(message) {
   warnings.push(message);
   console.log(`WARN ${message}`);
+}
+
+function env(name) {
+  return String(process.env[name] || '').trim();
+}
+
+function hasUsableSecretEnv(name) {
+  const value = env(name);
+  return Boolean(value) && !placeholders.has(value.toLowerCase());
 }
 
 async function run(command, args, options = {}) {
@@ -78,14 +88,35 @@ async function checkDns() {
 
 async function checkGitHub() {
   section('GitHub access');
+  const envSecrets = new Set(requiredSecrets.filter((name) => env(name)));
+  const usableEnvSecrets = new Set(requiredSecrets.filter((name) => hasUsableSecretEnv(name)));
+
+  for (const name of envSecrets) {
+    if (usableEnvSecrets.has(name)) {
+      pass(`${name} runtime env var is present`);
+    } else {
+      fail(`${name} runtime env var still looks like a placeholder`);
+    }
+  }
+
   const auth = await run('gh', ['auth', 'status']);
   if (!auth.ok) {
-    fail('gh CLI is not authenticated or unavailable');
-    console.log('Install/authenticate GitHub CLI or finish the setup in GitHub UI.');
+    if (usableEnvSecrets.size === requiredSecrets.length) {
+      warn('gh CLI is not authenticated or unavailable; skipping repository secret metadata because runtime secret env vars are present');
+      return;
+    }
+
+    fail('gh CLI is not authenticated or unavailable and required OAuth secret env vars are not all present');
+    console.log('Install/authenticate GitHub CLI, run from GitHub Actions with repo secrets, or finish the setup in GitHub UI.');
     return;
   }
 
   pass('gh CLI is authenticated');
+
+  if (usableEnvSecrets.size === requiredSecrets.length && process.env.GITHUB_ACTIONS === 'true') {
+    console.log('Running in GitHub Actions with required OAuth secret env vars present; repository secret metadata listing is not required.');
+    return;
+  }
 
   const secrets = await run('gh', [
     'secret',
@@ -111,7 +142,9 @@ async function checkGitHub() {
 
   const present = new Set(secretRows.map((secret) => secret.name));
   for (const name of requiredSecrets) {
-    if (present.has(name)) {
+    if (usableEnvSecrets.has(name)) {
+      pass(`${name} runtime env var is present`);
+    } else if (present.has(name)) {
       pass(`${repo} secret ${name} exists`);
     } else {
       fail(`${repo} secret ${name} is missing`);

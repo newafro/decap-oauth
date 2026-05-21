@@ -15,7 +15,7 @@ async function writeExecutable(dir, name, body) {
   return file;
 }
 
-async function makeToolPath({ secrets = [], onePasswordItems = [] } = {}) {
+async function makeToolPath({ secrets = [], onePasswordItems = [], ghAuth = true } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'newafro-operator-test-'));
   const secretJson = JSON.stringify(secrets.map((name) => ({ name, updatedAt: '2026-05-21T00:00:00Z' })));
   const itemJson = JSON.stringify(onePasswordItems.map((title) => ({ title, vault: { name: 'Test Vault' } })));
@@ -25,6 +25,10 @@ async function makeToolPath({ secrets = [], onePasswordItems = [] } = {}) {
     'gh',
     `#!/bin/sh
 if [ "$1" = "auth" ] && [ "$2" = "status" ]; then
+  if [ "${ghAuth ? '0' : '1'}" = "1" ]; then
+    echo "not authenticated" >&2
+    exit 1
+  fi
   echo "github.com"
   exit 0
 fi
@@ -112,5 +116,26 @@ test('operator preflight passes when DNS and GitHub secrets are present', async 
   assert.match(result.stdout, /PASS newafro\/decap-oauth secret GITHUB_OAUTH_ID exists/);
   assert.match(result.stdout, /PASS newafro\/decap-oauth secret GITHUB_OAUTH_SECRET exists/);
   assert.match(result.stdout, /FOUND New Afro Decap OAuth/);
+  assert.match(result.stdout, /Operator access checks passed/);
+});
+
+test('operator preflight can use runtime secret env vars in GitHub Actions', async () => {
+  const toolPath = await makeToolPath({
+    secrets: [],
+    onePasswordItems: ['New Afro Decap OAuth'],
+    ghAuth: false,
+  });
+
+  const result = runOperator(toolPath, {
+    GITHUB_ACTIONS: 'true',
+    GITHUB_OAUTH_ID: 'client-id',
+    GITHUB_OAUTH_SECRET: 'client-secret',
+    RENDER_API_KEY: 'test-render-token',
+  });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /PASS GITHUB_OAUTH_ID runtime env var is present/);
+  assert.match(result.stdout, /PASS GITHUB_OAUTH_SECRET runtime env var is present/);
+  assert.match(result.stdout, /skipping repository secret metadata because runtime secret env vars are present/);
   assert.match(result.stdout, /Operator access checks passed/);
 });

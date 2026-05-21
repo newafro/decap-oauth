@@ -78,6 +78,17 @@ access, whether the required GitHub repository secrets exist, visible
 fails, fix those operator prerequisites before expecting CMS login/save to
 work.
 
+After adding the GitHub repository secrets and Namecheap DNS, the same
+operator access check can be run from GitHub Actions:
+
+```text
+https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml
+```
+
+That workflow injects the OAuth repository secrets as environment variables
+and checks that the public `decap-oauth.newafro.com` DNS is live without
+printing secret values.
+
 Preferred no-local-secrets path:
 
 1. Add `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` as repository secrets in
