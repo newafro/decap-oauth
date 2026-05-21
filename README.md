@@ -63,6 +63,9 @@ Fields:
 
 This repository includes `render.yaml`.
 
+For the focused operator checklist, use
+[`docs/render-namecheap-runbook.md`](docs/render-namecheap-runbook.md).
+
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.
 3. Confirm these environment values:
