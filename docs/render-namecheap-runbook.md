@@ -65,6 +65,19 @@ Use `GITHUB_REPO_PRIVATE=1` only if `newafro/website` is made private.
 
 ## Preflight Before Namecheap
 
+Before the DNS work, Codex or an operator can check whether this machine has
+enough access to finish the setup:
+
+```bash
+npm run check:operator
+```
+
+This command does not print secret values. It checks public DNS, GitHub CLI
+access, whether the required GitHub repository secrets exist, visible
+1Password item names, and whether a Render token or CLI is available. If it
+fails, fix those operator prerequisites before expecting CMS login/save to
+work.
+
 Preferred no-local-secrets path:
 
 1. Add `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` as repository secrets in

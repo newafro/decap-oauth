@@ -1,0 +1,215 @@
+import { execFile } from 'node:child_process';
+import { resolve4, resolveCname } from 'node:dns/promises';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
+
+const repo = process.env.GITHUB_REPO || 'newafro/decap-oauth';
+const host = process.env.OAUTH_HOST || 'decap-oauth.newafro.com';
+const requiredSecrets = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET'];
+const failures = [];
+const warnings = [];
+
+function section(title) {
+  console.log(`\n== ${title} ==`);
+}
+
+function pass(message) {
+  console.log(`PASS ${message}`);
+}
+
+function fail(message) {
+  failures.push(message);
+  console.log(`FAIL ${message}`);
+}
+
+function warn(message) {
+  warnings.push(message);
+  console.log(`WARN ${message}`);
+}
+
+async function run(command, args, options = {}) {
+  try {
+    const result = await execFileAsync(command, args, {
+      timeout: options.timeout || 15000,
+      maxBuffer: options.maxBuffer || 1024 * 1024 * 10,
+      env: {
+        ...process.env,
+        ...(options.env || {}),
+      },
+    });
+    return {
+      ok: true,
+      stdout: result.stdout || '',
+      stderr: result.stderr || '',
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      stdout: error.stdout || '',
+      stderr: error.stderr || error.message || '',
+    };
+  }
+}
+
+async function checkDns() {
+  section(`DNS: ${host}`);
+  let cnames = [];
+  let addresses = [];
+
+  try {
+    cnames = await resolveCname(host);
+  } catch {}
+
+  try {
+    addresses = await resolve4(host);
+  } catch {}
+
+  if (cnames.length) console.log(`CNAME ${cnames.join(', ')}`);
+  if (addresses.length) console.log(`A ${addresses.join(', ')}`);
+
+  if (!cnames.length && !addresses.length) {
+    fail(`${host} has no public DNS result`);
+    return;
+  }
+
+  pass(`${host} resolves publicly`);
+}
+
+async function checkGitHub() {
+  section('GitHub access');
+  const auth = await run('gh', ['auth', 'status']);
+  if (!auth.ok) {
+    fail('gh CLI is not authenticated or unavailable');
+    console.log('Install/authenticate GitHub CLI or finish the setup in GitHub UI.');
+    return;
+  }
+
+  pass('gh CLI is authenticated');
+
+  const secrets = await run('gh', [
+    'secret',
+    'list',
+    '--repo',
+    repo,
+    '--json',
+    'name,updatedAt',
+  ]);
+
+  if (!secrets.ok) {
+    fail(`could not list repository secrets for ${repo}`);
+    return;
+  }
+
+  let secretRows = [];
+  try {
+    secretRows = JSON.parse(secrets.stdout || '[]');
+  } catch {
+    fail(`could not parse repository secrets for ${repo}`);
+    return;
+  }
+
+  const present = new Set(secretRows.map((secret) => secret.name));
+  for (const name of requiredSecrets) {
+    if (present.has(name)) {
+      pass(`${repo} secret ${name} exists`);
+    } else {
+      fail(`${repo} secret ${name} is missing`);
+    }
+  }
+}
+
+async function checkOnePassword() {
+  section('1Password access');
+  const accounts = await run('op', ['account', 'list', '--format=json'], {
+    timeout: 10000,
+  });
+
+  if (!accounts.ok) {
+    warn('op CLI is unavailable, locked, or not signed in');
+    console.log('This is okay if an operator will paste values into Render/GitHub manually.');
+    return;
+  }
+
+  pass('op CLI is signed in');
+
+  const items = await run('op', ['item', 'list', '--format=json'], {
+    timeout: 20000,
+  });
+
+  if (!items.ok) {
+    warn('could not list 1Password items');
+    return;
+  }
+
+  let rows = [];
+  try {
+    rows = JSON.parse(items.stdout || '[]');
+  } catch {
+    warn('could not parse 1Password item list');
+    return;
+  }
+
+  const matches = rows.filter((item) =>
+    /new afro|newafro|decap|oauth|render|namecheap/i.test(item.title || ''),
+  );
+
+  if (!matches.length) {
+    warn('no obvious New Afro OAuth/Render/Namecheap item found in 1Password');
+    console.log('Expected item name: New Afro Decap OAuth');
+    return;
+  }
+
+  for (const item of matches.slice(0, 10)) {
+    const vault = item.vault?.name || item.vault?.id || 'unknown vault';
+    console.log(`FOUND ${item.title} (${vault})`);
+  }
+}
+
+async function checkRenderAccess() {
+  section('Render access');
+  const renderCli = await run('render', ['--version'], { timeout: 5000 });
+  const hasRenderToken = Boolean(process.env.RENDER_API_KEY || process.env.RENDER_TOKEN);
+
+  if (renderCli.ok) {
+    pass('render CLI is available');
+  } else {
+    warn('render CLI is not available');
+  }
+
+  if (hasRenderToken) {
+    pass('Render API token env var is present');
+  } else {
+    warn('no RENDER_API_KEY or RENDER_TOKEN env var is present');
+  }
+
+  console.log('Browser-based Render setup is fine, but Codex cannot deploy Render unattended without a token or logged-in CLI.');
+}
+
+console.log('New Afro OAuth operator access preflight');
+console.log(`Repository: ${repo}`);
+console.log(`OAuth host: ${host}`);
+
+await checkDns();
+await checkGitHub();
+await checkOnePassword();
+await checkRenderAccess();
+
+section('Next action');
+if (failures.length) {
+  console.log('Required before CMS login/save can be verified:');
+  for (const failure of failures) console.log(`- ${failure}`);
+  console.log('');
+  console.log('Expected operator flow:');
+  console.log('1. Create/verify the GitHub OAuth app callback.');
+  console.log('2. Add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET to newafro/decap-oauth secrets.');
+  console.log('3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.');
+  console.log('4. Add Namecheap CNAME decap-oauth -> Render exact DNS target.');
+  process.exit(1);
+}
+
+if (warnings.length) {
+  console.log('No required checks failed, but review warnings before expecting unattended Codex deployment.');
+}
+
+console.log('Operator access checks passed.');

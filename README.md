@@ -66,6 +66,16 @@ This repository includes `render.yaml`.
 For the focused operator checklist, use
 [`docs/render-namecheap-runbook.md`](docs/render-namecheap-runbook.md).
 
+Before expecting Codex to finish the setup unattended, check whether the local
+machine has the required operator handles:
+
+```bash
+npm run check:operator
+```
+
+This checks DNS, GitHub repository secrets, visible 1Password item names, and
+Render access without printing secret values.
+
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.
 3. Confirm these environment values:
