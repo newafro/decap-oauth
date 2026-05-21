@@ -107,6 +107,17 @@ The command prints the exact Namecheap record and fails if a common mistake is
 present, for example using `newafro.github.io`, including `https://`, setting
 the wrong `PUBLIC_URL`, or leaving OAuth credentials blank.
 
+You can also run the same preflight in GitHub Actions after storing
+`GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` as repository secrets:
+
+```text
+https://github.com/newafro/decap-oauth/actions/workflows/deploy-config-preflight.yml
+```
+
+Use the exact Render custom-domain DNS target as the workflow input. The
+workflow prints the Namecheap `decap-oauth` CNAME value without exposing the
+OAuth secret.
+
 ## Local Test
 
 ```bash

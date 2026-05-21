@@ -1,0 +1,42 @@
+name: OAuth Deploy Config Preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      render_custom_domain_target:
+        description: "Exact Render custom-domain DNS target, without https://"
+        required: true
+        type: string
+      github_repo_private:
+        description: "Set to 1 only if newafro/website is private"
+        required: true
+        default: "0"
+        type: choice
+        options:
+          - "0"
+          - "1"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Check Render and OAuth config
+        env:
+          GITHUB_OAUTH_ID: ${{ secrets.GITHUB_OAUTH_ID }}
+          GITHUB_OAUTH_SECRET: ${{ secrets.GITHUB_OAUTH_SECRET }}
+          PUBLIC_URL: https://decap-oauth.newafro.com
+          GITHUB_REPO_PRIVATE: ${{ inputs.github_repo_private }}
+          RENDER_CUSTOM_DOMAIN_TARGET: ${{ inputs.render_custom_domain_target }}
+        run: npm run check:deploy-config
