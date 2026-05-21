@@ -164,6 +164,9 @@ Stop and fix the setup before onboarding anyone if:
 
 - `decap-oauth.newafro.com` has no DNS result.
 - `/healthz` is not `200` with `ok: true`.
+- `/healthz` reports a `publicUrl` or `callbackUrl` that is not
+  `https://decap-oauth.newafro.com` /
+  `https://decap-oauth.newafro.com/callback?provider=github`.
 - `/auth?provider=github` does not redirect to GitHub.
 - The GitHub redirect URI is not
   `https://decap-oauth.newafro.com/callback?provider=github`.

@@ -142,6 +142,18 @@ function assertConfigured(config) {
   return missing;
 }
 
+export function healthPayload(config) {
+  const missing = assertConfigured(config);
+  return {
+    ok: missing.length === 0,
+    missing,
+    provider: 'github',
+    publicUrl: config.publicUrl || '',
+    callbackUrl: config.publicUrl ? `${config.publicUrl}/callback?provider=github` : '',
+    scope: config.scope,
+  };
+}
+
 export function createHandler(config = getConfig()) {
   return async function handleRequest(req, res) {
     const url = new URL(req.url, config.publicUrl || `http://${req.headers.host}`);
@@ -161,13 +173,13 @@ export function createHandler(config = getConfig()) {
         return;
       }
 
-      const missing = assertConfigured(config);
-      res.writeHead(missing.length === 0 ? 200 : 500, {
+      const payload = healthPayload(config);
+      res.writeHead(payload.ok ? 200 : 500, {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
         ...HEALTH_CORS_HEADERS,
       });
-      res.end(JSON.stringify({ ok: missing.length === 0, missing }));
+      res.end(JSON.stringify(payload));
       return;
     }
 

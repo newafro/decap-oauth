@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
 import test from 'node:test';
-import { buildAuthorizeUrl, callbackHtml, createHandler, getConfig } from '../src/server.js';
+import { buildAuthorizeUrl, callbackHtml, createHandler, getConfig, healthPayload } from '../src/server.js';
 
 test('buildAuthorizeUrl points GitHub back to the New Afro callback', () => {
   const url = new URL(
@@ -63,9 +63,33 @@ test('healthz reports missing configuration', async () => {
   assert.equal(response.status, 500);
   assert.equal(body.ok, false);
   assert.deepEqual(body.missing, ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET', 'PUBLIC_URL']);
+  assert.equal(body.provider, 'github');
+  assert.equal(body.publicUrl, '');
+  assert.equal(body.callbackUrl, '');
 });
 
-test('healthz allows browser readiness checks', async () => {
+test('healthPayload exposes sanitized deploy metadata', () => {
+  const payload = healthPayload({
+    clientId: 'id',
+    clientSecret: 'secret',
+    publicUrl: 'https://decap-oauth.newafro.com',
+    scope: 'public_repo,user',
+    port: 0,
+  });
+
+  assert.deepEqual(payload, {
+    ok: true,
+    missing: [],
+    provider: 'github',
+    publicUrl: 'https://decap-oauth.newafro.com',
+    callbackUrl: 'https://decap-oauth.newafro.com/callback?provider=github',
+    scope: 'public_repo,user',
+  });
+  assert.equal('clientId' in payload, false);
+  assert.equal('clientSecret' in payload, false);
+});
+
+test('healthz allows browser readiness checks and reports callback metadata', async () => {
   const server = http.createServer((req, res) => {
     createHandler({
       clientId: 'id',
@@ -89,4 +113,7 @@ test('healthz allows browser readiness checks', async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('access-control-allow-origin'), '*');
   assert.equal(body.ok, true);
+  assert.equal(body.publicUrl, 'https://decap-oauth.newafro.com');
+  assert.equal(body.callbackUrl, 'https://decap-oauth.newafro.com/callback?provider=github');
+  assert.equal(body.scope, 'public_repo,user');
 });

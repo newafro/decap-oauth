@@ -125,8 +125,20 @@ async function checkHealth() {
       fail('health endpoint is missing CORS for the static CMS page');
       return;
     }
+    if (payload.publicUrl !== `https://${host}`) {
+      fail(`health endpoint reports wrong PUBLIC_URL: ${payload.publicUrl || '(missing)'}`);
+      return;
+    }
+    if (payload.callbackUrl !== `https://${host}/callback?provider=github`) {
+      fail(`health endpoint reports wrong callback URL: ${payload.callbackUrl || '(missing)'}`);
+      return;
+    }
+    if (!String(payload.scope || '').split(',').includes('user')) {
+      fail(`health endpoint reports OAuth scope without user: ${payload.scope || '(missing)'}`);
+      return;
+    }
 
-    pass('health endpoint is ready');
+    pass('health endpoint is ready and reports the expected public callback');
   } catch (error) {
     fail(`health endpoint failed: ${error.message}`);
   }

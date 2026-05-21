@@ -182,7 +182,10 @@ Expected:
 
 - `/` returns `200`.
 - `/healthz` returns `200` and includes CORS headers so the static CMS page can
-  check whether sign-in is ready before editors try to log in.
+  check whether sign-in is ready before editors try to log in. It also returns
+  sanitized deploy metadata (`publicUrl`, `callbackUrl`, and `scope`) so
+  operators can catch a wrong Render `PUBLIC_URL` without exposing OAuth
+  secrets.
 - `/auth?provider=github` returns `302` to `github.com/login/oauth/authorize`.
 - `https://preview.newafro.com/admin/` can complete GitHub login.
 
