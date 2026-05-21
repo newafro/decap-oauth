@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: newafro-decap-oauth
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PUBLIC_URL
+        value: https://decap-oauth.newafro.com
+      - key: GITHUB_REPO_PRIVATE
+        value: "0"
+      - key: GITHUB_OAUTH_ID
+        sync: false
+      - key: GITHUB_OAUTH_SECRET
+        sync: false
