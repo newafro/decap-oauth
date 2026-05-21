@@ -72,6 +72,11 @@ This repository includes `render.yaml`.
    GITHUB_REPO_PRIVATE=0
    ```
 
+   `newafro/website` is currently public, so `GITHUB_REPO_PRIVATE=0` keeps the
+   GitHub permission prompt narrower. If the website repository is made
+   private later, change this to `GITHUB_REPO_PRIVATE=1` before onboarding
+   editors.
+
 4. Add custom domain `decap-oauth.newafro.com`.
 5. Render will show the DNS target.
 6. In Namecheap, add the CNAME Render asks for:

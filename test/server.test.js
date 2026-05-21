@@ -25,6 +25,7 @@ test('callbackHtml emits the Decap authorization message format', () => {
 
   assert.match(html, /authorizing:github/);
   assert.match(html, /authorization:github:success/);
+  assert.match(html, /postAuthorization/);
   assert.match(html, /token-value/);
 });
 

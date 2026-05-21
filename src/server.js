@@ -62,6 +62,10 @@ export function buildAuthorizeUrl({ clientId, publicUrl, scope, state }) {
 
 export function callbackHtml(status, payload) {
   const message = `authorization:github:${status}:${JSON.stringify(payload)}`;
+  const title =
+    status === 'success'
+      ? 'Sign-in complete'
+      : 'Sign-in needs attention';
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -69,16 +73,38 @@ export function callbackHtml(status, payload) {
     <title>New Afro CMS Authorization</title>
     <script>
       const message = ${JSON.stringify(message)};
-      const receiveMessage = () => {
+      const postAuthorization = () => {
+        if (!window.opener) {
+          document.body.dataset.state = 'missing-opener';
+          return;
+        }
+
         window.opener.postMessage(message, '*');
+      };
+      const receiveMessage = () => {
+        postAuthorization();
         window.removeEventListener('message', receiveMessage, false);
       };
       window.addEventListener('message', receiveMessage, false);
-      window.opener.postMessage('authorizing:github', '*');
+      if (window.opener) {
+        window.opener.postMessage('authorizing:github', '*');
+        window.setTimeout(postAuthorization, 500);
+        window.setTimeout(postAuthorization, 2000);
+      }
     </script>
   </head>
   <body>
-    <p>Authorizing New Afro Studio...</p>
+    <main>
+      <h1>${title}</h1>
+      <p>
+        Return to the New Afro Studio tab. This window can be closed after
+        the website editor opens.
+      </p>
+      <p data-missing-opener>
+        If you opened this page directly, start again from
+        <a href="https://login.newafro.com">login.newafro.com</a>.
+      </p>
+    </main>
   </body>
 </html>`;
 }
