@@ -139,3 +139,21 @@ test('operator preflight can use runtime secret env vars in GitHub Actions', asy
   assert.match(result.stdout, /skipping repository secret metadata because runtime secret env vars are present/);
   assert.match(result.stdout, /Operator access checks passed/);
 });
+
+test('operator preflight names missing GitHub Actions secrets directly', async () => {
+  const toolPath = await makeToolPath({
+    secrets: [],
+    onePasswordItems: ['New Afro Decap OAuth'],
+    ghAuth: false,
+  });
+
+  const result = runOperator(toolPath, {
+    GITHUB_ACTIONS: 'true',
+    RENDER_API_KEY: 'test-render-token',
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /FAIL GITHUB_OAUTH_ID GitHub Actions secret is missing or unavailable to this workflow/);
+  assert.match(result.stdout, /FAIL GITHUB_OAUTH_SECRET GitHub Actions secret is missing or unavailable to this workflow/);
+  assert.match(result.stdout, /Add the missing repository secret\(s\) in newafro\/decap-oauth settings/);
+});

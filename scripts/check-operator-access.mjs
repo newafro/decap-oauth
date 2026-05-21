@@ -99,6 +99,16 @@ async function checkGitHub() {
     }
   }
 
+  if (process.env.GITHUB_ACTIONS === 'true' && usableEnvSecrets.size < requiredSecrets.length) {
+    for (const name of requiredSecrets) {
+      if (!usableEnvSecrets.has(name)) {
+        fail(`${name} GitHub Actions secret is missing or unavailable to this workflow`);
+      }
+    }
+    console.log(`Add the missing repository secret(s) in ${repo} settings, then rerun this workflow.`);
+    return;
+  }
+
   const auth = await run('gh', ['auth', 'status']);
   if (!auth.ok) {
     if (usableEnvSecrets.size === requiredSecrets.length) {
