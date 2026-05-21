@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { resolve4, resolveCname } from 'node:dns/promises';
+import fs from 'node:fs';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
@@ -10,6 +11,12 @@ const requiredSecrets = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET'];
 const failures = [];
 const warnings = [];
 const placeholders = new Set(['dummy', 'example', 'changeme', 'todo']);
+const githubSecretsUrl = `https://github.com/${repo}/settings/secrets/actions`;
+const deployPreflightUrl = `https://github.com/${repo}/actions/workflows/deploy-config-preflight.yml`;
+const operatorWorkflowUrl = `https://github.com/${repo}/actions/workflows/operator-access.yml`;
+const runbookUrl = `https://github.com/${repo}/blob/main/docs/render-namecheap-runbook.md`;
+const renderDeployUrl = `https://render.com/deploy?repo=https://github.com/${repo}`;
+const githubOauthAppUrl = 'https://github.com/settings/applications/new';
 
 function section(title) {
   console.log(`\n== ${title} ==`);
@@ -27,6 +34,59 @@ function fail(message) {
 function warn(message) {
   warnings.push(message);
   console.log(`WARN ${message}`);
+}
+
+function writeStepSummary() {
+  if (!process.env.GITHUB_STEP_SUMMARY) return;
+
+  const summary = [
+    '# New Afro OAuth Operator Preflight',
+    '',
+    `Repository: ${repo}`,
+    `OAuth host: https://${host}`,
+    `Status: ${failures.length ? 'BLOCKED' : 'READY'}`,
+    '',
+  ];
+
+  if (failures.length) {
+    summary.push('## Required Before CMS Login/Save', '');
+    for (const failure of failures) summary.push(`- ${failure}`);
+    summary.push('');
+  } else {
+    summary.push('## Result', '', '- Operator access checks passed.', '');
+  }
+
+  if (warnings.length) {
+    summary.push('## Warnings', '');
+    for (const warning of warnings) summary.push(`- ${warning}`);
+    summary.push('');
+  }
+
+  summary.push(
+    '## Operator Links',
+    '',
+    `- GitHub OAuth app setup: ${githubOauthAppUrl}`,
+    `- OAuth repo secrets: ${githubSecretsUrl}`,
+    `- Render deploy from repo: ${renderDeployUrl}`,
+    `- Deploy config preflight: ${deployPreflightUrl}`,
+    `- Operator access workflow: ${operatorWorkflowUrl}`,
+    `- Render/Namecheap runbook: ${runbookUrl}`,
+    '',
+    '## Expected Operator Flow',
+    '',
+    '1. Create or verify the GitHub OAuth app callback: https://decap-oauth.newafro.com/callback?provider=github',
+    '2. Add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET to the OAuth repo secrets.',
+    '3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.',
+    '4. Add Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target.',
+    '5. Rerun this workflow, then run the website CMS readiness check.',
+    '',
+  );
+
+  try {
+    fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join('\n')}\n`);
+  } catch (error) {
+    console.warn(`Could not write GitHub step summary: ${error.message}`);
+  }
 }
 
 function env(name) {
@@ -248,6 +308,7 @@ if (failures.length) {
   console.log('2. Add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET to newafro/decap-oauth secrets.');
   console.log('3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.');
   console.log('4. Add Namecheap CNAME decap-oauth -> Render exact DNS target.');
+  writeStepSummary();
   process.exit(1);
 }
 
@@ -256,3 +317,4 @@ if (warnings.length) {
 }
 
 console.log('Operator access checks passed.');
+writeStepSummary();

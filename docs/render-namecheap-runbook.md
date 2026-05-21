@@ -87,7 +87,9 @@ https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml
 
 That workflow injects the OAuth repository secrets as environment variables
 and checks that the public `decap-oauth.newafro.com` DNS is live without
-printing secret values.
+printing secret values. When it fails, read the GitHub Actions job summary
+first; it lists the missing item(s), the repo secret settings link, the Render
+deploy link, and the exact operator flow.
 
 Preferred no-local-secrets path:
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -157,4 +157,26 @@ test('operator preflight names missing GitHub Actions secrets directly', async (
   assert.match(result.stdout, /FAIL GITHUB_OAUTH_ID GitHub Actions secret is missing or unavailable to this workflow/);
   assert.match(result.stdout, /FAIL GITHUB_OAUTH_SECRET GitHub Actions secret is missing or unavailable to this workflow/);
   assert.match(result.stdout, /Add the missing repository secret\(s\) in newafro\/decap-oauth settings/);
+});
+
+test('operator preflight writes a GitHub step summary with setup links', async () => {
+  const toolPath = await makeToolPath({
+    secrets: [],
+    onePasswordItems: ['New Afro Decap OAuth'],
+  });
+  const summaryPath = join(mkdtempSync(join(tmpdir(), 'newafro-operator-summary-')), 'summary.md');
+
+  const result = runOperator(toolPath, {
+    GITHUB_STEP_SUMMARY: summaryPath,
+  });
+  const summary = readFileSync(summaryPath, 'utf8');
+
+  assert.equal(result.status, 1);
+  assert.match(summary, /# New Afro OAuth Operator Preflight/);
+  assert.match(summary, /Status: BLOCKED/);
+  assert.match(summary, /newafro\/decap-oauth secret GITHUB_OAUTH_ID is missing/);
+  assert.match(summary, /newafro\/decap-oauth secret GITHUB_OAUTH_SECRET is missing/);
+  assert.match(summary, /https:\/\/github.com\/newafro\/decap-oauth\/settings\/secrets\/actions/);
+  assert.match(summary, /https:\/\/render.com\/deploy\?repo=https:\/\/github.com\/newafro\/decap-oauth/);
+  assert.match(summary, /Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target/);
 });
