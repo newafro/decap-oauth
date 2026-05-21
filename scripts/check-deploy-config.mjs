@@ -3,6 +3,7 @@ const expectedPublicUrl = `https://${expectedHost}`;
 const githubCallbackUrl = `${expectedPublicUrl}/callback?provider=github`;
 const failures = [];
 const warnings = [];
+const missingSecrets = [];
 
 function env(name) {
   return String(process.env[name] || '').trim();
@@ -19,6 +20,7 @@ function warn(message) {
 function checkRequiredSecret(name) {
   const value = env(name);
   if (!value) {
+    missingSecrets.push(name);
     fail(`${name} is missing`);
     return;
   }
@@ -102,6 +104,13 @@ if (!renderTarget) {
 printHeader('Summary');
 if (warnings.length) {
   for (const message of warnings) console.log(`WARN ${message}`);
+}
+
+if (missingSecrets.length) {
+  console.log('\nMissing OAuth secrets next action:');
+  console.log('Add these as local environment variables or as repository secrets in newafro/decap-oauth:');
+  for (const name of missingSecrets) console.log(`- ${name}`);
+  console.log('Do not commit OAuth secrets to the repository.');
 }
 
 if (failures.length) {
