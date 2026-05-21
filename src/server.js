@@ -120,6 +120,16 @@ export function createHandler(config = getConfig()) {
       return;
     }
 
+    if (url.pathname === '/healthz') {
+      const missing = assertConfigured(config);
+      res.writeHead(missing.length === 0 ? 200 : 500, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(JSON.stringify({ ok: missing.length === 0, missing }));
+      return;
+    }
+
     const missing = assertConfigured(config);
     if (missing.length > 0) {
       textResponse(res, 500, `OAuth proxy is missing configuration: ${missing.join(', ')}`);

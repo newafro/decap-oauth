@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import http from 'node:http';
 import test from 'node:test';
-import { buildAuthorizeUrl, callbackHtml, getConfig } from '../src/server.js';
+import { buildAuthorizeUrl, callbackHtml, createHandler, getConfig } from '../src/server.js';
 
 test('buildAuthorizeUrl points GitHub back to the New Afro callback', () => {
   const url = new URL(
@@ -39,4 +40,26 @@ test('getConfig supports private repo scope override', () => {
   assert.equal(config.publicUrl, 'https://decap-oauth.newafro.com');
   assert.equal(config.scope, 'repo,user');
   assert.equal(config.port, 9000);
+});
+
+test('healthz reports missing configuration', async () => {
+  const server = http.createServer((req, res) => {
+    createHandler({
+      clientId: '',
+      clientSecret: '',
+      publicUrl: '',
+      scope: 'public_repo,user',
+      port: 0,
+    })(req, res);
+  });
+
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  const response = await fetch(`http://127.0.0.1:${port}/healthz`);
+  const body = await response.json();
+  server.close();
+
+  assert.equal(response.status, 500);
+  assert.equal(body.ok, false);
+  assert.deepEqual(body.missing, ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET', 'PUBLIC_URL']);
 });
