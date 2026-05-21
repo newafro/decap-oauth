@@ -108,10 +108,23 @@ http://127.0.0.1:8787/
 
 ## Verification
 
-After deployment:
+After deployment and DNS propagation, run the same gate used by GitHub Actions:
+
+```bash
+npm run check:live
+```
+
+Expected: the command passes. If DNS is still missing, it exits non-zero with:
+
+```text
+decap-oauth.newafro.com has no public DNS result
+```
+
+For manual spot checks:
 
 ```bash
 curl -I https://decap-oauth.newafro.com/
+curl -I https://decap-oauth.newafro.com/healthz
 curl -I "https://decap-oauth.newafro.com/auth?provider=github"
 ```
 
