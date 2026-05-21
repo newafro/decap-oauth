@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
@@ -56,4 +58,25 @@ test('deploy preflight prints the exact callback and Namecheap CNAME', () => {
   assert.match(result.stdout, /Host:  decap-oauth/);
   assert.match(result.stdout, /Value: newafro-decap-oauth\.onrender\.com/);
   assert.match(result.stdout, /Deploy config is ready for Render\/Namecheap setup/);
+});
+
+test('deploy preflight writes a GitHub step summary without secret values', () => {
+  const summaryPath = path.join(mkdtempSync(path.join(tmpdir(), 'newafro-deploy-summary-')), 'summary.md');
+  const result = runPreflight({
+    GITHUB_OAUTH_ID: 'client-id',
+    GITHUB_OAUTH_SECRET: 'client-secret',
+    PUBLIC_URL: 'https://decap-oauth.newafro.com',
+    GITHUB_REPO_PRIVATE: '0',
+    RENDER_CUSTOM_DOMAIN_TARGET: 'newafro-decap-oauth.onrender.com',
+    GITHUB_STEP_SUMMARY: summaryPath,
+  });
+  const summary = readFileSync(summaryPath, 'utf8');
+
+  assert.equal(result.status, 0);
+  assert.match(summary, /# New Afro OAuth Deploy Config/);
+  assert.match(summary, /Status: READY/);
+  assert.match(summary, /Authorization callback URL: https:\/\/decap-oauth\.newafro\.com\/callback\?provider=github/);
+  assert.match(summary, /Host: decap-oauth/);
+  assert.match(summary, /Value: newafro-decap-oauth\.onrender\.com/);
+  assert.doesNotMatch(summary, /client-secret/);
 });

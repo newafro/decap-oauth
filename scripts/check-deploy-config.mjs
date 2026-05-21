@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 const expectedHost = process.env.OAUTH_HOST || 'decap-oauth.newafro.com';
 const expectedPublicUrl = `https://${expectedHost}`;
 const githubCallbackUrl = `${expectedPublicUrl}/callback?provider=github`;
@@ -36,6 +38,70 @@ function normalizePublicUrl(value) {
 
 function printHeader(title) {
   console.log(`\n== ${title} ==`);
+}
+
+function writeStepSummary() {
+  if (!process.env.GITHUB_STEP_SUMMARY) return;
+
+  const status = failures.length ? 'BLOCKED' : 'READY';
+  const summary = [
+    '# New Afro OAuth Deploy Config',
+    '',
+    `Status: ${status}`,
+    '',
+    '## GitHub OAuth App',
+    '',
+    '- Application name: New Afro Studio CMS',
+    '- Homepage URL: https://newafro.com',
+    `- Authorization callback URL: ${githubCallbackUrl}`,
+    '',
+    '## Render Runtime',
+    '',
+    `- PUBLIC_URL: ${publicUrl || '(missing)'}`,
+    `- GITHUB_REPO_PRIVATE: ${repoPrivate}`,
+    `- Render custom-domain target: ${renderTarget || '(missing)'}`,
+    '',
+  ];
+
+  if (renderTarget) {
+    summary.push(
+      '## Namecheap DNS Record',
+      '',
+      '- Type: CNAME Record',
+      '- Host: decap-oauth',
+      `- Value: ${renderTarget}`,
+      '- TTL: Automatic',
+      '',
+    );
+  }
+
+  if (missingSecrets.length) {
+    summary.push('## Missing Secret Inputs', '');
+    for (const name of missingSecrets) summary.push(`- ${name}`);
+    summary.push('');
+  }
+
+  if (warnings.length) {
+    summary.push('## Warnings', '');
+    for (const message of warnings) summary.push(`- ${message}`);
+    summary.push('');
+  }
+
+  if (failures.length) {
+    summary.push('## Required Before Namecheap DNS', '');
+    for (const message of failures) summary.push(`- ${message}`);
+    summary.push('');
+  } else {
+    summary.push(
+      '## Result',
+      '',
+      '- Deploy config is ready for Render/Namecheap setup.',
+      '- Add the Namecheap DNS record above only after Render shows this exact custom-domain target.',
+      '',
+    );
+  }
+
+  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join('\n')}\n`);
 }
 
 const publicUrl = normalizePublicUrl(env('PUBLIC_URL') || env('RENDER_EXTERNAL_URL'));
@@ -115,7 +181,9 @@ if (missingSecrets.length) {
 
 if (failures.length) {
   for (const message of failures) console.log(`FAIL ${message}`);
+  writeStepSummary();
   process.exit(1);
 }
 
 console.log('Deploy config is ready for Render/Namecheap setup.');
+writeStepSummary();

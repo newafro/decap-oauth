@@ -91,6 +91,10 @@ printing secret values. When it fails, read the GitHub Actions job summary
 first; it lists the missing item(s), the repo secret settings link, the Render
 deploy link, and the exact operator flow.
 
+The deploy-config preflight also writes a GitHub Actions job summary. Read it
+before editing Namecheap; it repeats the callback URL and the exact CNAME
+record that should be added, without printing OAuth secret values.
+
 Preferred no-local-secrets path:
 
 1. Add `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` as repository secrets in
