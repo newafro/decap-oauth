@@ -33,7 +33,7 @@ own New Afro website admin access:
 ```text
 Application name: New Afro Studio CMS
 Homepage URL: https://newafro.com
-Authorization callback URL: https://decap-oauth.newafro.com/callback
+Authorization callback URL: https://decap-oauth.newafro.com/callback?provider=github
 ```
 
 GitHub URL:
