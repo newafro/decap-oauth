@@ -20,6 +20,17 @@ function pass(message) {
   log(`PASS ${message}`);
 }
 
+function logDnsInstructions() {
+  log('');
+  log('Required Namecheap record:');
+  log('  Type:  CNAME Record');
+  log('  Host:  decap-oauth');
+  log('  Value: the exact Render custom-domain target, without https://');
+  log('  TTL:   Automatic');
+  log('');
+  log('The record must be in the newafro.com Advanced DNS zone and must not point to GitHub Pages.');
+}
+
 function writeSummary() {
   if (process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
@@ -149,6 +160,7 @@ if (dnsReady) {
   await checkAuth();
 } else {
   log('\nSkipping HTTP checks until DNS exists.');
+  logDnsInstructions();
 }
 
 log('\n## Summary');
