@@ -113,7 +113,8 @@ curl -I "https://decap-oauth.newafro.com/auth?provider=github"
 Expected:
 
 - `/` returns `200`.
-- `/healthz` returns `200`.
+- `/healthz` returns `200` and includes CORS headers so the static CMS page can
+  check whether sign-in is ready before editors try to log in.
 - `/auth?provider=github` returns `302` to `github.com/login/oauth/authorize`.
 - `https://preview.newafro.com/admin/` can complete GitHub login.
 

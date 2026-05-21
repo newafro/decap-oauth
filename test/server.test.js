@@ -63,3 +63,29 @@ test('healthz reports missing configuration', async () => {
   assert.equal(body.ok, false);
   assert.deepEqual(body.missing, ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET', 'PUBLIC_URL']);
 });
+
+test('healthz allows browser readiness checks', async () => {
+  const server = http.createServer((req, res) => {
+    createHandler({
+      clientId: 'id',
+      clientSecret: 'secret',
+      publicUrl: 'https://decap-oauth.newafro.com',
+      scope: 'public_repo,user',
+      port: 0,
+    })(req, res);
+  });
+
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+  const response = await fetch(`http://127.0.0.1:${port}/healthz`, {
+    headers: {
+      Origin: 'https://preview.newafro.com',
+    },
+  });
+  const body = await response.json();
+  server.close();
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), '*');
+  assert.equal(body.ok, true);
+});

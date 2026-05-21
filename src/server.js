@@ -4,6 +4,11 @@ import http from 'node:http';
 const DEFAULT_SCOPE = 'public_repo,user';
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
+const HEALTH_CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
 
 export function getConfig(env = process.env) {
   const publicUrl = env.PUBLIC_URL || env.RENDER_EXTERNAL_URL;
@@ -121,10 +126,20 @@ export function createHandler(config = getConfig()) {
     }
 
     if (url.pathname === '/healthz') {
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204, {
+          'Cache-Control': 'no-store',
+          ...HEALTH_CORS_HEADERS,
+        });
+        res.end();
+        return;
+      }
+
       const missing = assertConfigured(config);
       res.writeHead(missing.length === 0 ? 200 : 500, {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store',
+        ...HEALTH_CORS_HEADERS,
       });
       res.end(JSON.stringify({ ok: missing.length === 0, missing }));
       return;
