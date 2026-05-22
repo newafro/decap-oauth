@@ -101,6 +101,17 @@ This only sets `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` in
 `newafro/decap-oauth`. It does not deploy Render and does not edit Namecheap
 DNS.
 
+If the OAuth app values exist but the 1Password item does not, create the item
+first without putting the values in command arguments:
+
+```bash
+GITHUB_OAUTH_ID=[from GitHub OAuth app] \
+GITHUB_OAUTH_SECRET=[from GitHub OAuth app] \
+npm run create:1password-item
+```
+
+Then run `npm run sync:github-secrets`.
+
 After adding the GitHub repository secrets and Namecheap DNS, the same
 operator access check can be run from GitHub Actions:
 

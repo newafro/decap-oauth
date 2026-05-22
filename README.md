@@ -91,6 +91,17 @@ This reads `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the exact
 `New Afro Decap OAuth` 1Password item and sets them on `newafro/decap-oauth`.
 It does not deploy Render or edit Namecheap DNS.
 
+If the GitHub OAuth app values exist but the 1Password item does not, create
+the item without putting secret values in command arguments:
+
+```bash
+GITHUB_OAUTH_ID=[from GitHub OAuth app] \
+GITHUB_OAUTH_SECRET=[from GitHub OAuth app] \
+npm run create:1password-item
+```
+
+Then run `npm run sync:github-secrets`.
+
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.
 3. Confirm these environment values:
