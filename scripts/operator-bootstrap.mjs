@@ -403,7 +403,7 @@ async function checkRenderConfig(fieldsByName) {
 
   if (!renderTarget) {
     warn('RENDER_CUSTOM_DOMAIN_TARGET is not set and automatic Render API discovery did not produce a target');
-    console.log('Next: deploy the Render service, add custom domain decap-oauth.newafro.com, copy the exact DNS target, then rerun:');
+    console.log('Next: deploy the Render service, set GITHUB_OAUTH_ID/GITHUB_OAUTH_SECRET/PUBLIC_URL/GITHUB_REPO_PRIVATE env vars, add custom domain decap-oauth.newafro.com, copy the exact DNS target, then rerun:');
     console.log('RENDER_CUSTOM_DOMAIN_TARGET=[exact Render target] npm run setup:operator');
     console.log('');
     console.log('If a Render API token is available, Codex can try to discover the target with:');

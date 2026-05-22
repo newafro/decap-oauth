@@ -316,9 +316,10 @@ function printNextAction() {
   log(`2. Add ${requiredSecrets.join(' and ')} to ${githubSecretsUrl}`);
   log(`3. Deploy ${repo} on Render and attach custom domain ${host}.`);
   log(`   ${renderDeployUrl}`);
-  log('4. Copy Render’s exact custom-domain DNS target.');
-  log('5. Add Namecheap CNAME: Host decap-oauth -> exact Render target.');
-  log('6. Run npm run check:live and npm run check:operator.');
+  log(`4. In Render, set service env vars: ${requiredSecrets.join(', ')}, PUBLIC_URL=https://${host}, GITHUB_REPO_PRIVATE=0.`);
+  log('5. Copy Render’s exact custom-domain DNS target.');
+  log('6. Add Namecheap CNAME: Host decap-oauth -> exact Render target.');
+  log('7. Run npm run check:live and npm run check:operator.');
   log('');
   log('Operator links:');
   log(`- Setup status: ${setupStatusUrl}`);
