@@ -84,7 +84,7 @@ fi
 if [ "$1" = "secret" ] && [ "$2" = "set" ]; then
   value="$(cat)"
   case "$3:$value" in
-    GITHUB_OAUTH_ID:client-id-from-op|GITHUB_OAUTH_SECRET:client-secret-from-op)
+    GITHUB_OAUTH_ID:client-id-from-op|GITHUB_OAUTH_SECRET:client-secret-from-op|GITHUB_OAUTH_ID:client-id-from-env|GITHUB_OAUTH_SECRET:client-secret-from-env)
       echo "set $3"
       exit 0
       ;;
@@ -196,7 +196,7 @@ test('syncs secrets and validates deploy config from 1Password fields', async ()
 
   assert.equal(result.status, 0);
   assert.match(result.stdout, /PASS 1Password item "New Afro Decap OAuth" is reachable/);
-  assert.match(result.stdout, /PASS GitHub Actions OAuth secrets are synced from 1Password/);
+  assert.match(result.stdout, /PASS GitHub Actions OAuth secrets are synced/);
   assert.match(result.stdout, /PASS Render\/Namecheap deploy config is ready/);
   assert.doesNotMatch(result.stdout, /client-id-from-op/);
   assert.doesNotMatch(result.stdout, /client-secret-from-op/);
@@ -266,5 +266,35 @@ exit 1
 
   assert.equal(result.status, 1);
   assert.match(result.stdout, /1Password CLI is not signed in/);
-  assert.match(result.stdout, /manual GitHub\/Render secret path/);
+  assert.match(result.stdout, /rerun with GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET/);
+});
+
+test('uses OAuth env vars when 1Password CLI is not signed in', async () => {
+  const toolPath = await makeToolPath();
+  await writeExecutable(
+    toolPath,
+    'op',
+    `#!/bin/sh
+if [ "$1" = "whoami" ]; then
+  echo "account is not signed in" >&2
+  exit 1
+fi
+echo "unexpected op args: $*" >&2
+exit 1
+`,
+  );
+
+  const result = runBootstrap(toolPath, {
+    GITHUB_OAUTH_ID: 'client-id-from-env',
+    GITHUB_OAUTH_SECRET: 'client-secret-from-env',
+    RENDER_CUSTOM_DOMAIN_TARGET: 'newafro-decap-oauth.onrender.com',
+  });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /WARN 1Password CLI is not signed in; using OAuth env vars/);
+  assert.match(result.stdout, /PASS OAuth env vars are available for GitHub secret sync/);
+  assert.match(result.stdout, /PASS GitHub Actions OAuth secrets are synced/);
+  assert.match(result.stdout, /PASS Render\/Namecheap deploy config is ready/);
+  assert.doesNotMatch(result.stdout, /client-id-from-env/);
+  assert.doesNotMatch(result.stdout, /client-secret-from-env/);
 });

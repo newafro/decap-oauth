@@ -1,9 +1,10 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
 const itemTitle = process.env.OP_ITEM_TITLE || 'New Afro Decap OAuth';
+const repo = process.env.GITHUB_REPO || 'newafro/decap-oauth';
 const publicUrl = String(process.env.PUBLIC_URL || 'https://decap-oauth.newafro.com').trim();
 const repoPrivate = String(process.env.GITHUB_REPO_PRIVATE || '0').trim();
 const renderTargetFromEnv = String(process.env.RENDER_CUSTOM_DOMAIN_TARGET || '').trim();
@@ -188,12 +189,23 @@ function oauthEnvReady() {
   return requiredSecrets.every((name) => valueLooksUsable(process.env[name]));
 }
 
+function fieldsFromEnv() {
+  const fieldsByName = new Map();
+  for (const name of requiredSecrets) fieldsByName.set(name, process.env[name]);
+  return fieldsByName;
+}
+
 async function readOnePasswordSecrets() {
   const account = await run('op', ['whoami', '--format=json'], {
     timeout: 10000,
   });
   if (!account.ok) {
-    fail('1Password CLI is not signed in; run op signin or use the manual GitHub/Render secret path');
+    if (oauthEnvReady()) {
+      warn('1Password CLI is not signed in; using OAuth env vars for GitHub secret sync');
+      return { ok: true, fieldsByName: fieldsFromEnv(), source: 'env' };
+    }
+
+    fail('1Password CLI is not signed in; run op signin or rerun with GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET env vars');
     return { ok: false, fieldsByName: new Map(), authFailed: true };
   }
 
@@ -234,7 +246,11 @@ async function ensureOnePasswordItem() {
   if (existing.authFailed) return new Map();
 
   if (existing.ok) {
-    pass(`1Password item "${itemTitle}" is reachable and has OAuth fields`);
+    if (existing.source === 'env') {
+      pass('OAuth env vars are available for GitHub secret sync');
+    } else {
+      pass(`1Password item "${itemTitle}" is reachable and has OAuth fields`);
+    }
     return existing.fieldsByName;
   }
 
@@ -265,17 +281,62 @@ async function ensureOnePasswordItem() {
   return created.fieldsByName;
 }
 
-async function syncGitHubSecrets() {
-  section('GitHub Actions Secrets');
-  const sync = await run(process.execPath, ['scripts/sync-github-secrets-from-1password.mjs'], {
-    timeout: 30000,
-  });
-  printOutput(sync);
+function setGitHubSecret(name, value) {
+  return new Promise((resolve) => {
+    const child = spawn('gh', ['secret', 'set', name, '--repo', repo, '--app', 'actions'], {
+      env: process.env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
 
-  if (sync.ok) {
-    pass('GitHub Actions OAuth secrets are synced from 1Password');
-  } else {
-    fail('could not sync GitHub Actions OAuth secrets from 1Password');
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+
+    child.on('error', (error) => {
+      resolve({ ok: false, stdout, stderr: error.message });
+    });
+
+    child.on('close', (code) => {
+      resolve({ ok: code === 0, stdout, stderr });
+    });
+
+    child.stdin.end(value);
+  });
+}
+
+async function syncGitHubSecrets(fieldsByName) {
+  section('GitHub Actions Secrets');
+  const auth = await run('gh', ['auth', 'status']);
+  if (!auth.ok) {
+    fail('gh CLI is not authenticated');
+    return;
+  }
+
+  pass('gh CLI is authenticated');
+
+  let setCount = 0;
+  for (const name of requiredSecrets) {
+    const value = String(fieldsByName.get(name) || '').trim();
+    if (!valueLooksUsable(value)) continue;
+
+    const result = await setGitHubSecret(name, value);
+    if (result.ok) {
+      setCount += 1;
+      pass(`set ${repo} Actions secret ${name}`);
+    } else {
+      fail(`could not set ${repo} Actions secret ${name}`);
+    }
+  }
+
+  if (setCount === requiredSecrets.length) {
+    pass('GitHub Actions OAuth secrets are synced');
   }
 }
 
@@ -374,7 +435,7 @@ console.log(`1Password item: ${itemTitle}`);
 console.log('Secret values are never printed.');
 
 const fieldsByName = await ensureOnePasswordItem();
-if (!failures.length) await syncGitHubSecrets();
+if (!failures.length) await syncGitHubSecrets(fieldsByName);
 if (!failures.length) await checkRenderConfig(fieldsByName);
 
 section('Summary');
