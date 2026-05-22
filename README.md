@@ -167,9 +167,11 @@ not guess it.
 
 After saving the Namecheap record, `npm run check:live` prints the authoritative
 Namecheap SOA serial and whether `dns1.registrar-servers.com` /
-`dns2.registrar-servers.com` can see the `decap-oauth` CNAME. If the serial has
-not changed and both authoritative servers still show `(none)`, the DNS zone was
-not saved with that record yet.
+`dns2.registrar-servers.com` can see the `decap-oauth` CNAME. It also probes the
+likely Render service URL while DNS is missing. If the serial has not changed
+and both authoritative servers still show `(none)`, the DNS zone was not saved
+with that record yet. If the Render probe shows `x-render-routing: no-server`,
+the service still needs to be deployed or attached in Render.
 
 If `https://newafro-decap-oauth.onrender.com` resolves but returns `404` with
 `x-render-routing: no-server`, that only proves Render DNS exists. It does not
@@ -240,10 +242,12 @@ After deployment and DNS propagation, run the same gate used by GitHub Actions:
 npm run check:live
 ```
 
-Expected: the command passes. If DNS is still missing, it exits non-zero with:
+Expected: the command passes. If DNS or Render attachment is still missing, it
+exits non-zero with the exact blocker, for example:
 
 ```text
 decap-oauth.newafro.com has no public DNS result
+https://newafro-decap-oauth.onrender.com is not attached to a Render service yet
 ```
 
 For manual spot checks:

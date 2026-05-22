@@ -219,9 +219,12 @@ Value: newafro.github.io
 
 After saving, run `npm run check:live`. When the record is still missing, the
 command prints the authoritative Namecheap SOA serial and the result from
-`dns1.registrar-servers.com` / `dns2.registrar-servers.com`. If the serial has
-not changed and both servers still show `(none)`, the record was not saved in
-the `newafro.com` zone yet.
+`dns1.registrar-servers.com` / `dns2.registrar-servers.com`. While DNS is
+missing, it also probes the likely Render service URL. If the serial has not
+changed and both authoritative servers still show `(none)`, the record was not
+saved in the `newafro.com` zone yet. If the Render probe reports
+`x-render-routing: no-server`, finish deploying or attaching the Render service
+before treating the OAuth proxy as ready.
 
 ## Verify
 
@@ -231,7 +234,10 @@ After DNS starts resolving, run:
 npm run check:live
 ```
 
-Expected: the command passes.
+Expected: the command passes. If it fails, use the listed blockers directly.
+Common unfinished states are missing `decap-oauth.newafro.com` DNS, missing
+OAuth repository secrets, or the likely Render service URL still returning
+`x-render-routing: no-server`.
 
 The same public live check can be run from GitHub Actions:
 
