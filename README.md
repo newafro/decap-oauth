@@ -73,11 +73,17 @@ Before expecting Codex to finish the setup unattended, check whether the local
 machine has the required operator handles:
 
 ```bash
+npm run status:setup
 npm run check:operator
 ```
 
-This checks DNS, GitHub repository secrets, visible 1Password item names, and
-Render access without printing secret values.
+`npm run status:setup` is informational and exits green so it can be used as a
+single operator status screen. It checks the current DNS, GitHub secret names
+when visible to the token, the exact 1Password item when available, and the
+likely Render service URL without printing secret values.
+
+`npm run check:operator` is the stricter gate. It exits non-zero until DNS,
+OAuth secrets, and Render setup are ready for CMS login/save.
 
 If the 1Password item exists locally and the GitHub CLI is authenticated, Codex
 can sync the OAuth values into GitHub Actions repository secrets without
