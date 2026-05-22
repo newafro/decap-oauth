@@ -81,14 +81,19 @@ Before the DNS work, Codex or an operator can check whether this machine has
 enough access to finish the setup:
 
 ```bash
+npm run status:setup
 npm run check:operator
 ```
 
-This command does not print secret values. It checks public DNS, GitHub CLI
-access, whether the required GitHub repository secrets exist, visible
-1Password item names, and whether a Render token or CLI is available. If it
-fails, fix those operator prerequisites before expecting CMS login/save to
-work.
+`npm run status:setup` is an informational one-screen status. It exits green so
+it can be shared with the person logged in to Render or Namecheap, while still
+listing the blockers. It does not prove CMS login/save readiness.
+
+`npm run check:operator` is the strict gate. It does not print secret values.
+It checks public DNS, GitHub CLI access, whether the required GitHub repository
+secrets exist, visible 1Password item names, and whether a Render token or CLI
+is available. If it fails, fix those operator prerequisites before expecting
+CMS login/save to work.
 
 If the exact 1Password item exists and this machine is signed in to GitHub CLI,
 sync the OAuth credentials into GitHub repository secrets without printing

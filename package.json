@@ -16,6 +16,7 @@
     "create:1password-item": "node scripts/create-1password-oauth-item.mjs",
     "setup:operator": "node scripts/operator-bootstrap.mjs",
     "sync:github-secrets": "node scripts/sync-github-secrets-from-1password.mjs",
+    "status:setup": "node scripts/print-setup-status.mjs",
     "test": "node --test"
   },
   "devDependencies": {
