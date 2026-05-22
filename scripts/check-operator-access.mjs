@@ -78,10 +78,11 @@ function writeStepSummary() {
     '## Expected Operator Flow',
     '',
     '1. Create or verify the GitHub OAuth app callback: https://decap-oauth.newafro.com/callback?provider=github',
-    '2. Add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET to the OAuth repo secrets.',
-    '3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.',
-    '4. Add Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target.',
-    '5. Rerun this workflow, then run the website CMS readiness check.',
+    '2. If the 1Password item is missing, run `GITHUB_OAUTH_ID=... GITHUB_OAUTH_SECRET=... npm run create:1password-item` from this repo.',
+    '3. Run `npm run sync:github-secrets`, or add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET manually to the OAuth repo secrets.',
+    '4. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.',
+    '5. Add Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target.',
+    '6. Rerun this workflow, then run the website CMS readiness check.',
     '',
   );
 
@@ -379,9 +380,10 @@ if (failures.length) {
   console.log('');
   console.log('Expected operator flow:');
   console.log('1. Create/verify the GitHub OAuth app callback.');
-  console.log('2. Add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET to newafro/decap-oauth secrets.');
-  console.log('3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.');
-  console.log('4. Add Namecheap CNAME decap-oauth -> Render exact DNS target.');
+  console.log('2. If the 1Password item is missing, run: GITHUB_OAUTH_ID=... GITHUB_OAUTH_SECRET=... npm run create:1password-item');
+  console.log('3. Run npm run sync:github-secrets, or add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET manually to newafro/decap-oauth secrets.');
+  console.log('4. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.');
+  console.log('5. Add Namecheap CNAME decap-oauth -> Render exact DNS target.');
   writeStepSummary();
   process.exit(1);
 }
