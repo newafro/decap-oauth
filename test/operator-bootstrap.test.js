@@ -27,6 +27,10 @@ async function makeToolPath({ itemExists = true } = {}) {
     dir,
     'op',
     `#!/bin/sh
+if [ "$1" = "whoami" ]; then
+  echo '{"url":"example.1password.com","email":"operator@example.com"}'
+  exit 0
+fi
 item_exists() {
   if [ "${itemExists ? '1' : '0'}" = "1" ] || [ -f "${stateFile}" ]; then
     return 0
@@ -241,4 +245,26 @@ test('fails safely when item and OAuth env vars are missing', async () => {
   assert.equal(result.status, 1);
   assert.match(result.stdout, /missing or incomplete/);
   assert.match(result.stdout, /rerun with GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET/);
+});
+
+test('fails clearly when 1Password CLI is not signed in', async () => {
+  const toolPath = await makeToolPath();
+  await writeExecutable(
+    toolPath,
+    'op',
+    `#!/bin/sh
+if [ "$1" = "whoami" ]; then
+  echo "account is not signed in" >&2
+  exit 1
+fi
+echo "unexpected op args: $*" >&2
+exit 1
+`,
+  );
+
+  const result = runBootstrap(toolPath);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /1Password CLI is not signed in/);
+  assert.match(result.stdout, /manual GitHub\/Render secret path/);
 });

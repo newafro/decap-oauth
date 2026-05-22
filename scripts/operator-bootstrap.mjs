@@ -189,6 +189,14 @@ function oauthEnvReady() {
 }
 
 async function readOnePasswordSecrets() {
+  const account = await run('op', ['whoami', '--format=json'], {
+    timeout: 10000,
+  });
+  if (!account.ok) {
+    fail('1Password CLI is not signed in; run op signin or use the manual GitHub/Render secret path');
+    return { ok: false, fieldsByName: new Map(), authFailed: true };
+  }
+
   const fields = requiredSecrets.map((secret) => `label=${secret}`).join(',');
   const result = await run('op', [
     'item',
@@ -223,6 +231,8 @@ async function readOnePasswordSecrets() {
 async function ensureOnePasswordItem() {
   section('1Password OAuth Item');
   const existing = await readOnePasswordSecrets();
+  if (existing.authFailed) return new Map();
+
   if (existing.ok) {
     pass(`1Password item "${itemTitle}" is reachable and has OAuth fields`);
     return existing.fieldsByName;

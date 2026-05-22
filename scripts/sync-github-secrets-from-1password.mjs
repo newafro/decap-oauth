@@ -78,6 +78,14 @@ function collectFields(payload) {
 
 async function readOnePasswordSecrets() {
   section('Read 1Password Item');
+  const account = await run('op', ['whoami', '--format=json'], {
+    timeout: 10000,
+  });
+  if (!account.ok) {
+    fail('1Password CLI is not signed in; run op signin or set GitHub Actions secrets manually');
+    return new Map();
+  }
+
   const fields = requiredSecrets.map((secret) => `label=${secret}`).join(',');
   const result = await run('op', [
     'item',
