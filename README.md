@@ -131,7 +131,9 @@ RENDER_API_KEY=[Render API token] npm run setup:operator
 
 This command reads/writes the exact 1Password item, syncs the GitHub Actions
 secrets, and runs the deploy-config preflight when possible. It never prints
-secret values.
+secret values. It requires a real `op whoami` sign-in before touching
+1Password item data; if 1Password is unavailable, use the manual GitHub
+Actions secret path instead.
 
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.

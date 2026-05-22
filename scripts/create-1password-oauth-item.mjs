@@ -123,6 +123,21 @@ function buildItemPayload() {
   };
 }
 
+async function ensureOnePasswordSignedIn() {
+  section('1Password Sign-In');
+  const account = await run('op', ['whoami', '--format=json'], {
+    timeout: 10000,
+  });
+
+  if (account.ok) {
+    pass('1Password CLI is signed in');
+    return true;
+  }
+
+  fail('1Password CLI is not signed in; run op signin or add the OAuth secrets manually');
+  return false;
+}
+
 async function ensureItemDoesNotExist() {
   section('Existing 1Password Item');
   const args = ['item', 'get', itemTitle, '--format=json'];
@@ -184,6 +199,7 @@ if (vault) console.log(`Vault: ${vault}`);
 console.log('Secret values are never printed.');
 
 checkInputs();
+if (!failures.length) await ensureOnePasswordSignedIn();
 if (!failures.length) await ensureItemDoesNotExist();
 if (!failures.length) await createItem();
 

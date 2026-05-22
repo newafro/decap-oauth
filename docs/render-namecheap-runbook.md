@@ -141,7 +141,9 @@ RENDER_API_KEY=[Render API token] npm run setup:operator
 This command creates the exact 1Password item when the OAuth env vars are
 provided, syncs the two GitHub Actions secrets from 1Password, and validates
 the Render/Namecheap target when `RENDER_CUSTOM_DOMAIN_TARGET` is present. It
-does not deploy Render and does not edit Namecheap DNS.
+does not deploy Render and does not edit Namecheap DNS. It requires a real
+`op whoami` sign-in before touching 1Password item data; if 1Password is
+unavailable, use the manual GitHub Actions secret path instead.
 
 After adding the GitHub repository secrets and Namecheap DNS, the same
 operator access check can be run from GitHub Actions:
