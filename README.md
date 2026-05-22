@@ -79,6 +79,18 @@ npm run check:operator
 This checks DNS, GitHub repository secrets, visible 1Password item names, and
 Render access without printing secret values.
 
+If the 1Password item exists locally and the GitHub CLI is authenticated, Codex
+can sync the OAuth values into GitHub Actions repository secrets without
+printing the values:
+
+```bash
+npm run sync:github-secrets
+```
+
+This reads `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the exact
+`New Afro Decap OAuth` 1Password item and sets them on `newafro/decap-oauth`.
+It does not deploy Render or edit Namecheap DNS.
+
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.
 3. Confirm these environment values:

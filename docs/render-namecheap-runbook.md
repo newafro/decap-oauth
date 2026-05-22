@@ -89,6 +89,18 @@ access, whether the required GitHub repository secrets exist, visible
 fails, fix those operator prerequisites before expecting CMS login/save to
 work.
 
+If the exact 1Password item exists and this machine is signed in to GitHub CLI,
+sync the OAuth credentials into GitHub repository secrets without printing
+their values:
+
+```bash
+npm run sync:github-secrets
+```
+
+This only sets `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` in
+`newafro/decap-oauth`. It does not deploy Render and does not edit Namecheap
+DNS.
+
 After adding the GitHub repository secrets and Namecheap DNS, the same
 operator access check can be run from GitHub Actions:
 
