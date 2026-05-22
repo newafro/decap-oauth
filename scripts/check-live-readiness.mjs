@@ -18,6 +18,7 @@ const diagnosticHosts = String(
   .map((name) => name.trim())
   .filter(Boolean);
 const previewOrigin = process.env.PREVIEW_ORIGIN || 'https://preview.newafro.com';
+const renderServiceUrl = process.env.RENDER_SERVICE_URL || 'https://newafro-decap-oauth.onrender.com';
 const operatorWorkflowUrl = 'https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml';
 const failures = [];
 const lines = ['# New Afro OAuth proxy live readiness', ''];
@@ -177,6 +178,7 @@ async function fetchWithTimeout(url, options = {}) {
   try {
     return await fetch(url, {
       redirect: options.redirect || 'follow',
+      method: options.method || 'GET',
       signal: controller.signal,
       headers: {
         'User-Agent': 'newafro-oauth-live-readiness',
@@ -185,6 +187,30 @@ async function fetchWithTimeout(url, options = {}) {
     });
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function checkRenderServiceProbe() {
+  log('\n## Render service probe');
+  log(`Probe URL: ${renderServiceUrl}`);
+  try {
+    const response = await fetchWithTimeout(renderServiceUrl, {
+      method: 'HEAD',
+      redirect: 'manual',
+    });
+    const renderRouting = response.headers.get('x-render-routing') || '';
+    log(`${response.status} ${renderServiceUrl}`);
+    if (renderRouting) log(`x-render-routing: ${renderRouting}`);
+
+    if (response.status === 404 && renderRouting === 'no-server') {
+      fail(`${renderServiceUrl} is not attached to a Render service yet`);
+    } else if (response.ok) {
+      pass(`${renderServiceUrl} responds`);
+    } else {
+      log(`WARN ${renderServiceUrl} returned HTTP ${response.status}; confirm the Render service is deployed and attached to the expected hostname`);
+    }
+  } catch (error) {
+    log(`WARN Render service probe failed for ${renderServiceUrl}: ${error.message}`);
   }
 }
 
@@ -282,6 +308,7 @@ if (dnsReady) {
 } else {
   log('\nSkipping HTTP checks until DNS exists.');
   await checkAuthoritativeDns();
+  await checkRenderServiceProbe();
   logDnsInstructions();
 }
 
