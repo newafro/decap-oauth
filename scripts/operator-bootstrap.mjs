@@ -6,11 +6,17 @@ const execFileAsync = promisify(execFile);
 const itemTitle = process.env.OP_ITEM_TITLE || 'New Afro Decap OAuth';
 const publicUrl = String(process.env.PUBLIC_URL || 'https://decap-oauth.newafro.com').trim();
 const repoPrivate = String(process.env.GITHUB_REPO_PRIVATE || '0').trim();
-const renderTarget = String(process.env.RENDER_CUSTOM_DOMAIN_TARGET || '').trim();
+const renderTargetFromEnv = String(process.env.RENDER_CUSTOM_DOMAIN_TARGET || '').trim();
+const renderApiBaseUrl = String(process.env.RENDER_API_BASE_URL || 'https://api.render.com/v1').replace(/\/$/, '');
+const renderApiToken = String(process.env.RENDER_API_KEY || process.env.RENDER_TOKEN || '').trim();
+const renderServiceName = String(process.env.RENDER_SERVICE_NAME || 'newafro-decap-oauth').trim();
+const renderServiceId = String(process.env.RENDER_SERVICE_ID || '').trim();
+const oauthHost = String(process.env.OAUTH_HOST || 'decap-oauth.newafro.com').trim();
 const requiredSecrets = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET'];
 const placeholders = new Set(['dummy', 'example', 'changeme', 'todo']);
 const failures = [];
 const warnings = [];
+let effectiveRenderTarget = renderTargetFromEnv;
 
 function section(title) {
   console.log(`\n== ${title} ==`);
@@ -57,6 +63,95 @@ async function run(command, args, options = {}) {
       stderr: error.stderr || error.message || '',
     };
   }
+}
+
+async function renderApi(path) {
+  const response = await fetch(`${renderApiBaseUrl}${path}`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${renderApiToken}`,
+      'User-Agent': 'newafro-oauth-operator-bootstrap',
+    },
+  });
+  const text = await response.text().catch(() => '');
+  let payload = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {}
+  }
+
+  return { ok: response.ok, status: response.status, payload, text };
+}
+
+function unwrapRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.results)) return payload.results;
+  if (payload && typeof payload === 'object') return [payload];
+  return [];
+}
+
+function unwrapService(row) {
+  return row?.service || row;
+}
+
+function getServiceId(row) {
+  const service = unwrapService(row);
+  return service?.id || row?.id || '';
+}
+
+function getServiceName(row) {
+  const service = unwrapService(row);
+  return service?.name || row?.name || '';
+}
+
+function getServiceUrlHost(row) {
+  const service = unwrapService(row);
+  const candidates = [
+    service?.serviceDetails?.url,
+    service?.details?.url,
+    service?.url,
+    row?.serviceDetails?.url,
+    row?.url,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const host = new URL(candidate).host;
+      if (host.endsWith('.onrender.com')) return host;
+    } catch {
+      const value = String(candidate).replace(/^https?:\/\//, '').replace(/\/$/, '');
+      if (value.endsWith('.onrender.com')) return value;
+    }
+  }
+
+  return '';
+}
+
+function getCustomDomainTarget(payload, serviceRow) {
+  const row = payload?.customDomain || payload?.domain || payload;
+  const candidates = [
+    row?.dnsTarget,
+    row?.server,
+    row?.target,
+    row?.recordValue,
+    row?.dnsRecord?.value,
+    row?.verification?.dnsTarget,
+    row?.verification?.recordValue,
+    row?.verification?.dnsRecord?.value,
+    row?.verification?.value,
+    getServiceUrlHost(serviceRow),
+  ];
+
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (value.endsWith('.onrender.com')) return value;
+  }
+
+  return '';
 }
 
 function printOutput(result) {
@@ -174,13 +269,74 @@ async function syncGitHubSecrets() {
   }
 }
 
+async function discoverRenderTarget() {
+  if (!renderApiToken) {
+    warn('RENDER_API_KEY or RENDER_TOKEN is not set, so the Render custom-domain target cannot be discovered automatically');
+    return '';
+  }
+
+  section('Render API Discovery');
+  let serviceRow = null;
+  let serviceId = renderServiceId;
+
+  if (serviceId) {
+    pass(`using Render service id from RENDER_SERVICE_ID`);
+  } else {
+    const query = new URLSearchParams({ name: renderServiceName, limit: '20' });
+    const services = await renderApi(`/services?${query.toString()}`);
+    if (!services.ok) {
+      fail(`could not list Render services by name ${renderServiceName}: HTTP ${services.status}`);
+      return '';
+    }
+
+    const rows = unwrapRows(services.payload);
+    serviceRow = rows.find((row) => getServiceName(row) === renderServiceName) || rows[0] || null;
+    serviceId = serviceRow ? getServiceId(serviceRow) : '';
+
+    if (!serviceId) {
+      fail(`could not find Render service id for ${renderServiceName}`);
+      return '';
+    }
+
+    pass(`found Render service ${renderServiceName}`);
+  }
+
+  const domain = await renderApi(
+    `/services/${encodeURIComponent(serviceId)}/custom-domains/${encodeURIComponent(oauthHost)}`,
+  );
+  if (!domain.ok) {
+    if (domain.status === 404) {
+      fail(`Render custom domain ${oauthHost} is not attached to service ${serviceId}`);
+    } else {
+      fail(`could not retrieve Render custom domain ${oauthHost}: HTTP ${domain.status}`);
+    }
+    return '';
+  }
+
+  pass(`Render custom domain ${oauthHost} is attached`);
+  const target = getCustomDomainTarget(domain.payload, serviceRow);
+  if (!target) {
+    warn(`could not discover the Render DNS target from the API response; copy it from Render and set RENDER_CUSTOM_DOMAIN_TARGET`);
+    return '';
+  }
+
+  pass(`discovered Render DNS target for ${oauthHost}`);
+  return target;
+}
+
 async function checkRenderConfig(fieldsByName) {
   section('Render And Namecheap Preflight');
 
+  const renderTarget = renderTargetFromEnv || await discoverRenderTarget();
+  if (renderTarget) effectiveRenderTarget = renderTarget;
+
   if (!renderTarget) {
-    warn('RENDER_CUSTOM_DOMAIN_TARGET is not set yet');
+    warn('RENDER_CUSTOM_DOMAIN_TARGET is not set and automatic Render API discovery did not produce a target');
     console.log('Next: deploy the Render service, add custom domain decap-oauth.newafro.com, copy the exact DNS target, then rerun:');
     console.log('RENDER_CUSTOM_DOMAIN_TARGET=[exact Render target] npm run setup:operator');
+    console.log('');
+    console.log('If a Render API token is available, Codex can try to discover the target with:');
+    console.log('RENDER_API_KEY=[token] npm run setup:operator');
     return;
   }
 
@@ -224,6 +380,6 @@ if (failures.length) {
 }
 
 console.log('Operator bootstrap completed for the available inputs.');
-if (!renderTarget) {
+if (!effectiveRenderTarget) {
   console.log('Render custom-domain DNS is still the next external step.');
 }

@@ -126,6 +126,12 @@ After Render shows the custom-domain DNS target, rerun:
 RENDER_CUSTOM_DOMAIN_TARGET=[exact Render DNS target] npm run setup:operator
 ```
 
+If a Render API token is available, the helper can try to discover that target:
+
+```bash
+RENDER_API_KEY=[Render API token] npm run setup:operator
+```
+
 This command creates the exact 1Password item when the OAuth env vars are
 provided, syncs the two GitHub Actions secrets from 1Password, and validates
 the Render/Namecheap target when `RENDER_CUSTOM_DOMAIN_TARGET` is present. It

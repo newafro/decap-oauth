@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const scriptPath = resolve('scripts/operator-bootstrap.mjs');
@@ -107,6 +107,83 @@ function runBootstrap(toolPath, env = {}) {
   });
 }
 
+async function startRenderApiServer(t) {
+  const dir = mkdtempSync(join(tmpdir(), 'newafro-render-api-test-'));
+  const requestsFile = join(dir, 'requests.txt');
+  const serverFile = join(dir, 'server.mjs');
+
+  writeFileSync(
+    serverFile,
+    `import { appendFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+
+const requestsFile = process.argv[2];
+const server = createServer((request, response) => {
+  appendFileSync(requestsFile, \`\${request.url}\\n\`);
+  response.setHeader('Content-Type', 'application/json');
+
+  if (request.url.startsWith('/services?')) {
+    response.end(JSON.stringify({
+      data: [{
+        service: {
+          id: 'srv-newafro',
+          name: 'newafro-decap-oauth',
+          serviceDetails: {
+            url: 'https://newafro-decap-oauth.onrender.com',
+          },
+        },
+      }],
+    }));
+    return;
+  }
+
+  if (request.url === '/services/srv-newafro/custom-domains/decap-oauth.newafro.com') {
+    response.end(JSON.stringify({
+      customDomain: {
+        name: 'decap-oauth.newafro.com',
+        dnsTarget: 'newafro-decap-oauth-custom.onrender.com',
+      },
+    }));
+    return;
+  }
+
+  response.statusCode = 404;
+  response.end(JSON.stringify({ message: 'not found' }));
+});
+
+server.listen(0, '127.0.0.1', () => {
+  console.log(server.address().port);
+});
+
+process.on('SIGTERM', () => {
+  server.close(() => process.exit(0));
+});
+`,
+  );
+
+  const child = spawn(process.execPath, [serverFile, requestsFile], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  t.after(() => child.kill('SIGTERM'));
+
+  const port = await new Promise((resolvePort, rejectPort) => {
+    const timeout = setTimeout(() => rejectPort(new Error('Render API test server did not start')), 5000);
+    child.once('exit', (code) => {
+      clearTimeout(timeout);
+      rejectPort(new Error(`Render API test server exited before listening with code ${code}`));
+    });
+    child.stdout.once('data', (chunk) => {
+      clearTimeout(timeout);
+      resolvePort(String(chunk).trim());
+    });
+  });
+
+  return {
+    baseUrl: `http://127.0.0.1:${port}`,
+    requests: () => readFileSync(requestsFile, 'utf8').trim().split('\n').filter(Boolean),
+  };
+}
+
 test('syncs secrets and validates deploy config from 1Password fields', async () => {
   const toolPath = await makeToolPath();
   const result = runBootstrap(toolPath, {
@@ -119,6 +196,27 @@ test('syncs secrets and validates deploy config from 1Password fields', async ()
   assert.match(result.stdout, /PASS Render\/Namecheap deploy config is ready/);
   assert.doesNotMatch(result.stdout, /client-id-from-op/);
   assert.doesNotMatch(result.stdout, /client-secret-from-op/);
+});
+
+test('discovers Render target through API token when explicit target is absent', async (t) => {
+  const toolPath = await makeToolPath();
+  const renderApi = await startRenderApiServer(t);
+  const result = runBootstrap(toolPath, {
+    RENDER_API_BASE_URL: renderApi.baseUrl,
+    RENDER_API_KEY: 'render-token-for-test',
+  });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /PASS found Render service newafro-decap-oauth/);
+  assert.match(result.stdout, /PASS Render custom domain decap-oauth\.newafro\.com is attached/);
+  assert.match(result.stdout, /PASS discovered Render DNS target for decap-oauth\.newafro\.com/);
+  assert.match(result.stdout, /Value: newafro-decap-oauth-custom\.onrender\.com/);
+  assert.doesNotMatch(result.stdout, /Render custom-domain DNS is still the next external step/);
+  assert.doesNotMatch(result.stdout, /render-token-for-test/);
+  assert.deepEqual(renderApi.requests(), [
+    '/services?name=newafro-decap-oauth&limit=20',
+    '/services/srv-newafro/custom-domains/decap-oauth.newafro.com',
+  ]);
 });
 
 test('creates missing 1Password item when OAuth env vars are supplied', async () => {
