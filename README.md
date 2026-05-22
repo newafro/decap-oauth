@@ -102,6 +102,25 @@ npm run create:1password-item
 
 Then run `npm run sync:github-secrets`.
 
+The guided operator path combines those credential steps and, when the Render
+target is available, validates the Namecheap record before DNS is changed:
+
+```bash
+GITHUB_OAUTH_ID=[from GitHub OAuth app] \
+GITHUB_OAUTH_SECRET=[from GitHub OAuth app] \
+npm run setup:operator
+```
+
+After Render shows the custom-domain DNS target, rerun:
+
+```bash
+RENDER_CUSTOM_DOMAIN_TARGET=[exact Render DNS target] npm run setup:operator
+```
+
+This command reads/writes the exact 1Password item, syncs the GitHub Actions
+secrets, and runs the deploy-config preflight when possible. It never prints
+secret values.
+
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.
 3. Confirm these environment values:
