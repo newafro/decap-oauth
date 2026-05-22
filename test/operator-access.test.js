@@ -124,8 +124,8 @@ test('operator preflight fails with missing GitHub OAuth secrets', async () => {
   assert.match(result.stdout, /FAIL newafro\/decap-oauth secret GITHUB_OAUTH_ID is missing/);
   assert.match(result.stdout, /FAIL newafro\/decap-oauth secret GITHUB_OAUTH_SECRET is missing/);
   assert.match(result.stdout, /Expected operator flow/);
-  assert.match(result.stdout, /npm run create:1password-item/);
-  assert.match(result.stdout, /npm run sync:github-secrets/);
+  assert.match(result.stdout, /npm run setup:operator/);
+  assert.match(result.stdout, /Manual fallback: npm run create:1password-item, then npm run sync:github-secrets/);
 });
 
 test('operator preflight passes when DNS and GitHub secrets are present', async () => {
@@ -244,6 +244,8 @@ test('operator preflight writes a GitHub step summary with setup links', async (
   assert.match(summary, /newafro\/decap-oauth secret GITHUB_OAUTH_SECRET is missing/);
   assert.match(summary, /https:\/\/github.com\/newafro\/decap-oauth\/settings\/secrets\/actions/);
   assert.match(summary, /https:\/\/render.com\/deploy\?repo=https:\/\/github.com\/newafro\/decap-oauth/);
+  assert.match(summary, /npm run setup:operator/);
+  assert.match(summary, /Manual fallback/);
   assert.match(summary, /npm run create:1password-item/);
   assert.match(summary, /npm run sync:github-secrets/);
   assert.match(summary, /Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target/);

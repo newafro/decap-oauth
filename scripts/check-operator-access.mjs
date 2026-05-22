@@ -78,11 +78,16 @@ function writeStepSummary() {
     '## Expected Operator Flow',
     '',
     '1. Create or verify the GitHub OAuth app callback: https://decap-oauth.newafro.com/callback?provider=github',
-    '2. If the 1Password item is missing, run `GITHUB_OAUTH_ID=... GITHUB_OAUTH_SECRET=... npm run create:1password-item` from this repo.',
-    '3. Run `npm run sync:github-secrets`, or add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET manually to the OAuth repo secrets.',
-    '4. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.',
+    '2. Run `GITHUB_OAUTH_ID=... GITHUB_OAUTH_SECRET=... npm run setup:operator` from this repo.',
+    '3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.',
+    '4. Run `RENDER_CUSTOM_DOMAIN_TARGET=[exact Render target] npm run setup:operator`.',
     '5. Add Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target.',
     '6. Rerun this workflow, then run the website CMS readiness check.',
+    '',
+    'Manual fallback:',
+    '',
+    '- `npm run create:1password-item` creates the exact 1Password item when OAuth env vars are present.',
+    '- `npm run sync:github-secrets` syncs values from 1Password into this repo Actions secrets.',
     '',
   );
 
@@ -380,10 +385,12 @@ if (failures.length) {
   console.log('');
   console.log('Expected operator flow:');
   console.log('1. Create/verify the GitHub OAuth app callback.');
-  console.log('2. If the 1Password item is missing, run: GITHUB_OAUTH_ID=... GITHUB_OAUTH_SECRET=... npm run create:1password-item');
-  console.log('3. Run npm run sync:github-secrets, or add GITHUB_OAUTH_ID and GITHUB_OAUTH_SECRET manually to newafro/decap-oauth secrets.');
-  console.log('4. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.');
+  console.log('2. Run: GITHUB_OAUTH_ID=... GITHUB_OAUTH_SECRET=... npm run setup:operator');
+  console.log('3. Deploy this repo on Render and add decap-oauth.newafro.com as a custom domain.');
+  console.log('4. Run: RENDER_CUSTOM_DOMAIN_TARGET=[exact Render target] npm run setup:operator');
   console.log('5. Add Namecheap CNAME decap-oauth -> Render exact DNS target.');
+  console.log('');
+  console.log('Manual fallback: npm run create:1password-item, then npm run sync:github-secrets.');
   writeStepSummary();
   process.exit(1);
 }
