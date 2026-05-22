@@ -19,12 +19,12 @@ function runPreflight(env = {}) {
 
 test('deploy preflight explains missing OAuth secrets', () => {
   const result = runPreflight({
-    PUBLIC_URL: 'https://decap-oauth.newafro.com',
     GITHUB_REPO_PRIVATE: '0',
     RENDER_CUSTOM_DOMAIN_TARGET: 'newafro-decap-oauth.onrender.com',
   });
 
   assert.equal(result.status, 1);
+  assert.match(result.stdout, /PUBLIC_URL=https:\/\/decap-oauth\.newafro\.com/);
   assert.match(result.stdout, /Missing OAuth secrets next action/);
   assert.match(result.stdout, /- GITHUB_OAUTH_ID/);
   assert.match(result.stdout, /- GITHUB_OAUTH_SECRET/);
