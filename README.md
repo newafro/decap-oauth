@@ -144,6 +144,9 @@ be run from GitHub:
 https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml
 ```
 
+It also runs daily after the live OAuth readiness monitor, so the team gets a
+fresh pass/fail signal once Render, DNS, and repository secrets are in place.
+
 It verifies the DNS and that the workflow can read the OAuth repository
 secrets without printing their values.
 

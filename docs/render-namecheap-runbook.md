@@ -91,6 +91,10 @@ operator access check can be run from GitHub Actions:
 https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml
 ```
 
+It also runs daily after the live OAuth readiness monitor, so a finished
+Render/DNS/secrets setup should turn green without someone remembering the
+manual rerun.
+
 That workflow injects the OAuth repository secrets as environment variables
 and checks that the public `decap-oauth.newafro.com` DNS is live without
 printing secret values. When it fails, read the GitHub Actions job summary
