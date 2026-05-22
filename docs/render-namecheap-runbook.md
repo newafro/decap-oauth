@@ -207,6 +207,12 @@ Value: https://...
 Value: newafro.github.io
 ```
 
+After saving, run `npm run check:live`. When the record is still missing, the
+command prints the authoritative Namecheap SOA serial and the result from
+`dns1.registrar-servers.com` / `dns2.registrar-servers.com`. If the serial has
+not changed and both servers still show `(none)`, the record was not saved in
+the `newafro.com` zone yet.
+
 ## Verify
 
 After DNS starts resolving, run:

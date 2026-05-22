@@ -155,6 +155,12 @@ secret values.
 The exact CNAME target comes from Render after the custom domain is added. Do
 not guess it.
 
+After saving the Namecheap record, `npm run check:live` prints the authoritative
+Namecheap SOA serial and whether `dns1.registrar-servers.com` /
+`dns2.registrar-servers.com` can see the `decap-oauth` CNAME. If the serial has
+not changed and both authoritative servers still show `(none)`, the DNS zone was
+not saved with that record yet.
+
 If `https://newafro-decap-oauth.onrender.com` resolves but returns `404` with
 `x-render-routing: no-server`, that only proves Render DNS exists. It does not
 prove the New Afro OAuth service is deployed or attached to that hostname.

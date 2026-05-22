@@ -1,11 +1,27 @@
-import { resolve4, resolveCname } from 'node:dns/promises';
+import { Resolver, resolve4, resolveCname } from 'node:dns/promises';
 import fs from 'node:fs';
+import { isIP } from 'node:net';
 
 const host = process.env.OAUTH_HOST || 'decap-oauth.newafro.com';
+const dnsZone = process.env.DNS_ZONE || 'newafro.com';
+const authoritativeServers = String(
+  process.env.AUTHORITATIVE_DNS_SERVERS || 'dns1.registrar-servers.com,dns2.registrar-servers.com',
+)
+  .split(',')
+  .map((server) => server.trim())
+  .filter(Boolean);
+const diagnosticHosts = String(
+  process.env.DNS_DIAGNOSTIC_HOSTS ||
+    'decap-oauth.newafro.com.newafro.com,oauth.newafro.com,cms.newafro.com,admin.newafro.com,studio.newafro.com',
+)
+  .split(',')
+  .map((name) => name.trim())
+  .filter(Boolean);
 const previewOrigin = process.env.PREVIEW_ORIGIN || 'https://preview.newafro.com';
 const operatorWorkflowUrl = 'https://github.com/newafro/decap-oauth/actions/workflows/operator-access.yml';
 const failures = [];
 const lines = ['# New Afro OAuth proxy live readiness', ''];
+const nameserverAddressCache = new Map();
 
 function log(line = '') {
   console.log(line);
@@ -38,6 +54,95 @@ function logDnsInstructions() {
 function writeSummary() {
   if (process.env.GITHUB_STEP_SUMMARY) {
     fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join('\n'));
+  }
+}
+
+async function withTimeout(promise, ms, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function resolveWithAuthoritativeServer(server, method, name) {
+  const address = await getNameserverAddress(server);
+  if (!address) return null;
+
+  const resolver = new Resolver();
+  resolver.setServers([address]);
+
+  try {
+    return await withTimeout(resolver[method](name), 5000, `${server} ${method} ${name}`);
+  } catch {
+    return null;
+  }
+}
+
+async function getNameserverAddress(server) {
+  if (nameserverAddressCache.has(server)) return nameserverAddressCache.get(server);
+  if (isIP(server)) {
+    nameserverAddressCache.set(server, server);
+    return server;
+  }
+
+  try {
+    const addresses = await withTimeout(resolve4(server), 5000, `resolve nameserver ${server}`);
+    const address = addresses[0] || '';
+    nameserverAddressCache.set(server, address);
+    return address;
+  } catch {
+    nameserverAddressCache.set(server, '');
+    return '';
+  }
+}
+
+async function checkCommonWrongHostRecords() {
+  let found = false;
+
+  for (const name of diagnosticHosts) {
+    try {
+      const cnames = await resolveCname(name);
+      if (cnames.length) {
+        found = true;
+        log(`Possible wrong-host CNAME ${name}: ${cnames.join(', ')}`);
+      }
+    } catch {}
+  }
+
+  if (!found) log('No common wrong-host CNAMEs were found.');
+}
+
+async function checkAuthoritativeDns() {
+  log(`\n## Authoritative DNS: ${dnsZone}`);
+  let foundAuthoritativeCname = false;
+
+  for (const server of authoritativeServers) {
+    const soa = await resolveWithAuthoritativeServer(server, 'resolveSoa', dnsZone);
+    if (soa?.serial) {
+      log(`${server} SOA serial: ${soa.serial}`);
+    } else {
+      log(`${server} SOA serial: unavailable`);
+    }
+
+    const cnames = await resolveWithAuthoritativeServer(server, 'resolveCname', host);
+    if (cnames?.length) {
+      foundAuthoritativeCname = true;
+      log(`${server} CNAME ${host}: ${cnames.join(', ')}`);
+    } else {
+      log(`${server} CNAME ${host}: (none)`);
+    }
+  }
+
+  if (!foundAuthoritativeCname) {
+    log(`No authoritative CNAME for ${host} was found in the ${dnsZone} zone.`);
+    await checkCommonWrongHostRecords();
   }
 }
 
@@ -176,6 +281,7 @@ if (dnsReady) {
   await checkAuth();
 } else {
   log('\nSkipping HTTP checks until DNS exists.');
+  await checkAuthoritativeDns();
   logDnsInstructions();
 }
 
