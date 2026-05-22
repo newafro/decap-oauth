@@ -18,6 +18,8 @@ const runbookUrl = `https://github.com/${repo}/blob/main/docs/render-namecheap-r
 const renderDeployUrl = `https://render.com/deploy?repo=https://github.com/${repo}`;
 const githubOauthAppUrl = 'https://github.com/settings/applications/new';
 const renderServiceUrl = process.env.RENDER_SERVICE_URL ?? 'https://newafro-decap-oauth.onrender.com';
+const onePasswordItemTitle = 'New Afro Decap OAuth';
+const expectedOnePasswordFields = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET', 'PUBLIC_URL'];
 
 function section(title) {
   console.log(`\n== ${title} ==`);
@@ -255,12 +257,42 @@ async function checkOnePassword() {
 
   pass('op CLI is signed in');
 
+  const exactItem = await run('op', ['item', 'get', onePasswordItemTitle, '--format=json'], {
+    timeout: 15000,
+  });
+
+  if (exactItem.ok) {
+    try {
+      const item = JSON.parse(exactItem.stdout || '{}');
+      const vault = item.vault?.name || item.vault?.id || 'unknown vault';
+      const fields = new Set(
+        (item.fields || [])
+          .map((field) => field.label || field.id)
+          .filter(Boolean),
+      );
+
+      pass(`1Password item "${onePasswordItemTitle}" is reachable (${vault})`);
+      for (const field of expectedOnePasswordFields) {
+        if (fields.has(field)) {
+          pass(`1Password item has ${field} field`);
+        } else {
+          warn(`1Password item "${onePasswordItemTitle}" is missing visible field ${field}`);
+        }
+      }
+      return;
+    } catch {
+      warn(`could not parse 1Password item "${onePasswordItemTitle}"`);
+    }
+  } else {
+    warn(`1Password item "${onePasswordItemTitle}" was not found by exact name`);
+  }
+
   const items = await run('op', ['item', 'list', '--format=json'], {
     timeout: 20000,
   });
 
   if (!items.ok) {
-    warn('could not list 1Password items');
+    warn(`could not list 1Password items; create or rename the item to "${onePasswordItemTitle}" with fields ${expectedOnePasswordFields.join(', ')}`);
     return;
   }
 
@@ -278,7 +310,7 @@ async function checkOnePassword() {
 
   if (!matches.length) {
     warn('no obvious New Afro OAuth/Render/Namecheap item found in 1Password');
-    console.log('Expected item name: New Afro Decap OAuth');
+    console.log(`Expected item name: ${onePasswordItemTitle}`);
     return;
   }
 

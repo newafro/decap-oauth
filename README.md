@@ -59,6 +59,9 @@ Fields:
 - PUBLIC_URL=https://decap-oauth.newafro.com
 ```
 
+Use the exact item title `New Afro Decap OAuth`. The operator preflight looks
+up that item directly and reports only field names, never secret values.
+
 ## Render Deploy
 
 This repository includes `render.yaml`.

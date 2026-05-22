@@ -36,6 +36,11 @@ GITHUB_REPO_PRIVATE=0
 
 Use `GITHUB_REPO_PRIVATE=1` only if `newafro/website` is made private.
 
+Keep the item title exact. The operator preflight checks for
+`New Afro Decap OAuth` by name before it tries a broader 1Password search, so
+this still works when vault-wide item listing is unavailable. The preflight
+only prints field names and never prints secret values.
+
 ## Deploy On Render
 
 1. Create a Render Blueprint or Web Service from:

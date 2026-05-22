@@ -19,6 +19,24 @@ async function makeToolPath({ secrets = [], onePasswordItems = [], ghAuth = true
   const dir = mkdtempSync(join(tmpdir(), 'newafro-operator-test-'));
   const secretJson = JSON.stringify(secrets.map((name) => ({ name, updatedAt: '2026-05-21T00:00:00Z' })));
   const itemJson = JSON.stringify(onePasswordItems.map((title) => ({ title, vault: { name: 'Test Vault' } })));
+  const exactItemCases = onePasswordItems.map((title) => {
+    const item = JSON.stringify({
+      title,
+      vault: { name: 'Test Vault' },
+      fields: [
+        { label: 'GITHUB_OAUTH_ID', value: 'redacted' },
+        { label: 'GITHUB_OAUTH_SECRET', value: 'redacted' },
+        { label: 'PUBLIC_URL', value: 'https://decap-oauth.newafro.com' },
+      ],
+    });
+
+    return `if [ "$3" = "${title}" ]; then
+  cat <<'JSON'
+${item}
+JSON
+  exit 0
+fi`;
+  }).join('\n');
 
   await writeExecutable(
     dir,
@@ -56,6 +74,11 @@ if [ "$1" = "item" ] && [ "$2" = "list" ]; then
 ${itemJson}
 JSON
   exit 0
+fi
+if [ "$1" = "item" ] && [ "$2" = "get" ]; then
+${exactItemCases}
+  echo "item not found" >&2
+  exit 1
 fi
 echo "unexpected op args: $*" >&2
 exit 1
@@ -117,8 +140,48 @@ test('operator preflight passes when DNS and GitHub secrets are present', async 
   assert.match(result.stdout, /PASS localhost resolves publicly/);
   assert.match(result.stdout, /PASS newafro\/decap-oauth secret GITHUB_OAUTH_ID exists/);
   assert.match(result.stdout, /PASS newafro\/decap-oauth secret GITHUB_OAUTH_SECRET exists/);
-  assert.match(result.stdout, /FOUND New Afro Decap OAuth/);
+  assert.match(result.stdout, /PASS 1Password item "New Afro Decap OAuth" is reachable/);
+  assert.match(result.stdout, /PASS 1Password item has GITHUB_OAUTH_ID field/);
+  assert.match(result.stdout, /PASS 1Password item has GITHUB_OAUTH_SECRET field/);
   assert.match(result.stdout, /Operator access checks passed/);
+});
+
+test('operator preflight checks the exact 1Password item before broad listing', async () => {
+  const toolPath = await makeToolPath({
+    secrets: ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET'],
+    onePasswordItems: ['New Afro Decap OAuth'],
+  });
+
+  await writeExecutable(
+    toolPath,
+    'op',
+    `#!/bin/sh
+if [ "$1" = "account" ] && [ "$2" = "list" ]; then
+  echo '[{"url":"example.1password.com","email":"operator@example.com"}]'
+  exit 0
+fi
+if [ "$1" = "item" ] && [ "$2" = "get" ] && [ "$3" = "New Afro Decap OAuth" ]; then
+  cat <<'JSON'
+{"title":"New Afro Decap OAuth","vault":{"name":"Test Vault"},"fields":[{"label":"GITHUB_OAUTH_ID"},{"label":"GITHUB_OAUTH_SECRET"},{"label":"PUBLIC_URL"}]}
+JSON
+  exit 0
+fi
+if [ "$1" = "item" ] && [ "$2" = "list" ]; then
+  echo "listing disabled" >&2
+  exit 1
+fi
+echo "unexpected op args: $*" >&2
+exit 1
+`,
+  );
+
+  const result = runOperator(toolPath, {
+    RENDER_API_KEY: 'test-render-token',
+  });
+
+  assert.equal(result.status, 0);
+  assert.match(result.stdout, /PASS 1Password item "New Afro Decap OAuth" is reachable/);
+  assert.doesNotMatch(result.stdout, /could not list 1Password items/);
 });
 
 test('operator preflight can use runtime secret env vars in GitHub Actions', async () => {
