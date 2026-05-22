@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import test from 'node:test';
 
 const scriptPath = resolve('scripts/check-operator-access.mjs');
@@ -82,6 +82,7 @@ function runOperator(toolPath, env = {}) {
       GITHUB_ACTIONS: 'false',
       PATH: `${toolPath}:${process.env.PATH}`,
       OAUTH_HOST: 'localhost',
+      RENDER_SERVICE_URL: '',
       ...env,
     },
   });
@@ -179,4 +180,50 @@ test('operator preflight writes a GitHub step summary with setup links', async (
   assert.match(summary, /https:\/\/github.com\/newafro\/decap-oauth\/settings\/secrets\/actions/);
   assert.match(summary, /https:\/\/render.com\/deploy\?repo=https:\/\/github.com\/newafro\/decap-oauth/);
   assert.match(summary, /Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target/);
+});
+
+test('operator preflight warns when Render reports no-server', async () => {
+  const toolPath = await makeToolPath({
+    secrets: [],
+    onePasswordItems: ['New Afro Decap OAuth'],
+  });
+  const serverDir = mkdtempSync(join(tmpdir(), 'newafro-render-server-'));
+  const serverPath = join(serverDir, 'server.mjs');
+  writeFileSync(
+    serverPath,
+    `import { createServer } from 'node:http';
+const server = createServer((_req, res) => {
+  res.writeHead(404, {
+    'content-type': 'text/plain',
+    'x-render-routing': 'no-server',
+  });
+  res.end('Not Found');
+});
+server.listen(0, '127.0.0.1', () => {
+  console.log(server.address().port);
+});
+process.on('SIGTERM', () => server.close(() => process.exit(0)));
+`,
+  );
+  const server = spawn(process.execPath, [serverPath], {
+    stdio: ['ignore', 'pipe', 'inherit'],
+  });
+  const port = await new Promise((resolvePort, rejectPort) => {
+    server.stdout.once('data', (chunk) => resolvePort(String(chunk).trim()));
+    server.once('error', rejectPort);
+  });
+
+  try {
+    const result = runOperator(toolPath, {
+      RENDER_SERVICE_URL: `http://127.0.0.1:${port}`,
+    });
+
+    assert.equal(result.status, 1);
+    assert.match(result.stdout, /x-render-routing: no-server/);
+    assert.match(result.stdout, /Render reports no-server/);
+    assert.match(result.stdout, /finish the Render service setup/);
+  } finally {
+    server.kill('SIGTERM');
+    await new Promise((resolveClose) => server.once('exit', resolveClose));
+  }
 });

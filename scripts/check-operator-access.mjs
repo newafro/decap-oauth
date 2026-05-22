@@ -17,6 +17,7 @@ const operatorWorkflowUrl = `https://github.com/${repo}/actions/workflows/operat
 const runbookUrl = `https://github.com/${repo}/blob/main/docs/render-namecheap-runbook.md`;
 const renderDeployUrl = `https://render.com/deploy?repo=https://github.com/${repo}`;
 const githubOauthAppUrl = 'https://github.com/settings/applications/new';
+const renderServiceUrl = process.env.RENDER_SERVICE_URL ?? 'https://newafro-decap-oauth.onrender.com';
 
 function section(title) {
   console.log(`\n== ${title} ==`);
@@ -119,6 +120,24 @@ async function run(command, args, options = {}) {
       stdout: error.stdout || '',
       stderr: error.stderr || error.message || '',
     };
+  }
+}
+
+async function fetchWithTimeout(url, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeout || 15000);
+  try {
+    return await fetch(url, {
+      method: options.method || 'GET',
+      redirect: options.redirect || 'manual',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'newafro-oauth-operator-preflight',
+        ...(options.headers || {}),
+      },
+    });
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -287,6 +306,29 @@ async function checkRenderAccess() {
   }
 
   console.log('Browser-based Render setup is fine, but Codex cannot deploy Render unattended without a token or logged-in CLI.');
+
+  if (!renderServiceUrl) {
+    warn('Render service URL probe is disabled');
+    return;
+  }
+
+  console.log(`Render service probe: ${renderServiceUrl}`);
+  try {
+    const response = await fetchWithTimeout(renderServiceUrl, { method: 'HEAD' });
+    const renderRouting = response.headers.get('x-render-routing') || '';
+    console.log(`${response.status} ${renderServiceUrl}`);
+    if (renderRouting) console.log(`x-render-routing: ${renderRouting}`);
+
+    if (response.status === 404 && renderRouting === 'no-server') {
+      warn(`${renderServiceUrl} resolves but Render reports no-server; finish the Render service setup and use the exact custom-domain target`);
+    } else if (response.ok) {
+      pass(`${renderServiceUrl} responds`);
+    } else {
+      warn(`${renderServiceUrl} returned HTTP ${response.status}; confirm the Render service is deployed and attached to the expected hostname`);
+    }
+  } catch (error) {
+    warn(`could not reach ${renderServiceUrl}: ${error.message}`);
+  }
 }
 
 console.log('New Afro OAuth operator access preflight');
