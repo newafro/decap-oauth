@@ -104,7 +104,7 @@ function writeStepSummary() {
   fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary.join('\n')}\n`);
 }
 
-const publicUrl = normalizePublicUrl(env('PUBLIC_URL') || env('RENDER_EXTERNAL_URL'));
+const publicUrl = normalizePublicUrl(env('PUBLIC_URL') || env('RENDER_EXTERNAL_URL') || expectedPublicUrl);
 const repoPrivate = env('GITHUB_REPO_PRIVATE') || '0';
 const renderTarget = env('RENDER_CUSTOM_DOMAIN_TARGET');
 
@@ -114,9 +114,7 @@ printHeader('Required runtime env');
 checkRequiredSecret('GITHUB_OAUTH_ID');
 checkRequiredSecret('GITHUB_OAUTH_SECRET');
 
-if (!publicUrl) {
-  fail('PUBLIC_URL is missing');
-} else if (publicUrl !== expectedPublicUrl) {
+if (publicUrl !== expectedPublicUrl) {
   fail(`PUBLIC_URL must be ${expectedPublicUrl}, got ${publicUrl}`);
 }
 
