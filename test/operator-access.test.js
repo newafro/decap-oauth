@@ -251,7 +251,7 @@ test('operator preflight writes a GitHub step summary with setup links', async (
   assert.match(summary, /Namecheap CNAME decap-oauth -> exact Render custom-domain DNS target/);
 });
 
-test('operator preflight warns when Render reports no-server', async () => {
+test('operator preflight blocks when Render reports no-server', async () => {
   const toolPath = await makeToolPath({
     secrets: [],
     onePasswordItems: ['New Afro Decap OAuth'],
@@ -289,8 +289,8 @@ process.on('SIGTERM', () => server.close(() => process.exit(0)));
 
     assert.equal(result.status, 1);
     assert.match(result.stdout, /x-render-routing: no-server/);
-    assert.match(result.stdout, /Render reports no-server/);
-    assert.match(result.stdout, /finish the Render service setup/);
+    assert.match(result.stdout, /is not attached to a Render service yet/);
+    assert.match(result.stdout, /Required before CMS login\/save can be verified/);
   } finally {
     server.kill('SIGTERM');
     await new Promise((resolveClose) => server.once('exit', resolveClose));

@@ -358,7 +358,7 @@ async function checkRenderAccess() {
     if (renderRouting) console.log(`x-render-routing: ${renderRouting}`);
 
     if (response.status === 404 && renderRouting === 'no-server') {
-      warn(`${renderServiceUrl} resolves but Render reports no-server; finish the Render service setup and use the exact custom-domain target`);
+      fail(`${renderServiceUrl} is not attached to a Render service yet`);
     } else if (response.ok) {
       pass(`${renderServiceUrl} responds`);
     } else {
