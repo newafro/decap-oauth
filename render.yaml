@@ -5,7 +5,10 @@ services:
     plan: free
     buildCommand: npm ci
     startCommand: npm start
-    autoDeploy: true
+    autoDeployTrigger: checksPass
+    healthCheckPath: /healthz
+    domains:
+      - decap-oauth.newafro.com
     envVars:
       - key: NODE_VERSION
         value: 20

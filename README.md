@@ -129,7 +129,9 @@ secret values.
 
 1. Click **Deploy to Render** above, or create a Render Blueprint from this repository.
 2. Set `GITHUB_OAUTH_ID` and `GITHUB_OAUTH_SECRET` from the GitHub OAuth app.
-3. Confirm these environment values:
+3. The Blueprint declares `decap-oauth.newafro.com` as the custom domain and
+   uses `/healthz` as the Render health check.
+4. Confirm these environment values:
 
    ```text
    PUBLIC_URL=https://decap-oauth.newafro.com
@@ -141,8 +143,7 @@ secret values.
    private later, change this to `GITHUB_REPO_PRIVATE=1` before onboarding
    editors.
 
-4. Add custom domain `decap-oauth.newafro.com`.
-5. Render will show the DNS target.
+5. Render will show the DNS target for `decap-oauth.newafro.com`.
 6. In Namecheap, add the CNAME Render asks for:
 
    ```text

@@ -50,7 +50,8 @@ only prints field names and never prints secret values.
    ```
 
 2. Use Node 20, `npm ci`, and `npm start`. The committed `render.yaml`
-   already contains the expected defaults.
+   already contains the expected defaults, declares `decap-oauth.newafro.com`
+   as the custom domain, and uses `/healthz` as the Render health check.
 3. Add the environment variables from 1Password:
 
    ```text
@@ -60,7 +61,7 @@ only prints field names and never prints secret values.
    GITHUB_REPO_PRIVATE=0
    ```
 
-4. Add Render custom domain:
+4. Confirm Render custom domain:
 
    ```text
    decap-oauth.newafro.com

@@ -11,10 +11,14 @@
     "start": "node src/server.js",
     "check:deploy-config": "node scripts/check-deploy-config.mjs",
     "check:operator": "node scripts/check-operator-access.mjs",
+    "check:render-blueprint": "node scripts/check-render-blueprint.mjs",
     "check:live": "node scripts/check-live-readiness.mjs",
     "create:1password-item": "node scripts/create-1password-oauth-item.mjs",
     "setup:operator": "node scripts/operator-bootstrap.mjs",
     "sync:github-secrets": "node scripts/sync-github-secrets-from-1password.mjs",
     "test": "node --test"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.0"
   }
 }
