@@ -251,11 +251,11 @@ async function checkGitHub() {
 
 async function checkOnePassword() {
   section('1Password access');
-  const accounts = await run('op', ['account', 'list', '--format=json'], {
+  const account = await run('op', ['whoami', '--format=json'], {
     timeout: 10000,
   });
 
-  if (!accounts.ok) {
+  if (!account.ok) {
     warn('op CLI is unavailable, locked, or not signed in');
     console.log('This is okay if an operator will paste values into Render/GitHub manually.');
     return;
