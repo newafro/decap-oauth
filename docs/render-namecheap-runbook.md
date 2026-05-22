@@ -154,6 +154,12 @@ npm run check:live
 
 Expected: the command passes.
 
+The same public live check can be run from GitHub Actions:
+
+```text
+https://github.com/newafro/decap-oauth/actions/workflows/live-readiness.yml
+```
+
 Then verify the website side from `newafro/website`:
 
 ```bash
