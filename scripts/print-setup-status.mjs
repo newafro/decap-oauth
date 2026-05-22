@@ -20,6 +20,13 @@ const nameservers = String(
 const requiredSecrets = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET'];
 const requiredOnePasswordFields = ['GITHUB_OAUTH_ID', 'GITHUB_OAUTH_SECRET', 'PUBLIC_URL'];
 const callbackUrl = `https://${host}/callback?provider=github`;
+const githubOauthAppUrl = 'https://github.com/settings/applications/new';
+const githubSecretsUrl = `https://github.com/${repo}/settings/secrets/actions`;
+const renderDeployUrl = `https://render.com/deploy?repo=https://github.com/${repo}`;
+const setupStatusUrl = `https://github.com/${repo}/actions/workflows/setup-status.yml`;
+const liveReadinessUrl = `https://github.com/${repo}/actions/workflows/live-readiness.yml`;
+const operatorPreflightUrl = `https://github.com/${repo}/actions/workflows/operator-access.yml`;
+const runbookUrl = `https://github.com/${repo}/blob/main/docs/render-namecheap-runbook.md`;
 const nameserverAddressCache = new Map();
 const blockers = [];
 const warnings = [];
@@ -305,11 +312,19 @@ function printNextAction() {
   log('');
   log('Operator path:');
   log(`1. Create/verify GitHub OAuth app callback: ${callbackUrl}`);
-  log(`2. Add ${requiredSecrets.join(' and ')} to https://github.com/${repo}/settings/secrets/actions`);
+  log(`   ${githubOauthAppUrl}`);
+  log(`2. Add ${requiredSecrets.join(' and ')} to ${githubSecretsUrl}`);
   log(`3. Deploy ${repo} on Render and attach custom domain ${host}.`);
+  log(`   ${renderDeployUrl}`);
   log('4. Copy Render’s exact custom-domain DNS target.');
   log('5. Add Namecheap CNAME: Host decap-oauth -> exact Render target.');
   log('6. Run npm run check:live and npm run check:operator.');
+  log('');
+  log('Operator links:');
+  log(`- Setup status: ${setupStatusUrl}`);
+  log(`- Live readiness: ${liveReadinessUrl}`);
+  log(`- Operator preflight: ${operatorPreflightUrl}`);
+  log(`- Render/Namecheap runbook: ${runbookUrl}`);
 }
 
 function writeStepSummary() {
