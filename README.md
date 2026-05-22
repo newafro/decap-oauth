@@ -104,6 +104,12 @@ Render access without printing secret values.
 The exact CNAME target comes from Render after the custom domain is added. Do
 not guess it.
 
+If `https://newafro-decap-oauth.onrender.com` resolves but returns `404` with
+`x-render-routing: no-server`, that only proves Render DNS exists. It does not
+prove the New Afro OAuth service is deployed or attached to that hostname.
+Finish the Render service setup and use the exact custom-domain target Render
+shows for `decap-oauth.newafro.com`.
+
 Before changing Namecheap, run the deploy-config preflight with the exact
 Render target:
 

@@ -63,6 +63,12 @@ Use `GITHUB_REPO_PRIVATE=1` only if `newafro/website` is made private.
 
 5. Copy the exact DNS target Render gives you. Do not guess it.
 
+If `https://newafro-decap-oauth.onrender.com` resolves but returns `404` with
+`x-render-routing: no-server`, Render DNS exists but the New Afro service is
+not deployed or that hostname is not attached to the service. Do not use that
+as proof that the OAuth proxy is ready. Finish the Render service setup and use
+the exact custom-domain target Render shows for `decap-oauth.newafro.com`.
+
 ## Preflight Before Namecheap
 
 Before the DNS work, Codex or an operator can check whether this machine has
@@ -175,6 +181,7 @@ The first real designer CMS test can start only when all of those checks pass.
 Stop and fix the setup before onboarding anyone if:
 
 - `decap-oauth.newafro.com` has no DNS result.
+- the likely Render service URL returns `x-render-routing: no-server`.
 - `/healthz` is not `200` with `ok: true`.
 - `/healthz` reports a `publicUrl` or `callbackUrl` that is not
   `https://decap-oauth.newafro.com` /
