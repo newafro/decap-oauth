@@ -52,6 +52,25 @@ function fieldValue(value) {
   return String(value || '').trim();
 }
 
+function describeOnePasswordAccessFailure(result) {
+  const output = `${result.stderr || ''}\n${result.stdout || ''}`.toLowerCase();
+  if (
+    output.includes('not signed in') ||
+    output.includes('not currently signed in') ||
+    output.includes('account is not signed in') ||
+    output.includes('authorization timeout') ||
+    output.includes('signin')
+  ) {
+    return '1Password CLI is not signed in in this environment';
+  }
+
+  if (output.includes('not found') || output.includes('isn\'t an item') || output.includes('could not find')) {
+    return `1Password item "${itemTitle}" was not found by exact name`;
+  }
+
+  return `1Password item "${itemTitle}" is not visible in this environment`;
+}
+
 async function run(command, args, options = {}) {
   try {
     const result = await execFileAsync(command, args, {
@@ -207,12 +226,24 @@ function collectOnePasswordFields(payload) {
 
 async function checkOnePassword() {
   section('1Password Item');
+  const account = await run('op', ['account', 'list', '--format=json'], {
+    timeout: 10000,
+  });
+
+  if (!account.ok) {
+    warn(describeOnePasswordAccessFailure(account));
+    log('This is fine if the operator sets the GitHub/Render secrets manually.');
+    return;
+  }
+
+  pass('1Password CLI is signed in');
+
   const result = await run('op', ['item', 'get', itemTitle, '--format', 'json'], {
     timeout: 10000,
   });
 
   if (!result.ok) {
-    warn(`1Password item "${itemTitle}" is not visible in this environment`);
+    warn(describeOnePasswordAccessFailure(result));
     log('This is fine if the operator sets the GitHub/Render secrets manually.');
     return;
   }
