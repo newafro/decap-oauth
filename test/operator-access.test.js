@@ -65,8 +65,8 @@ exit 1
     dir,
     'op',
     `#!/bin/sh
-if [ "$1" = "account" ] && [ "$2" = "list" ]; then
-  echo '[{"url":"example.1password.com","email":"operator@example.com"}]'
+if [ "$1" = "whoami" ]; then
+  echo '{"url":"example.1password.com","email":"operator@example.com"}'
   exit 0
 fi
 if [ "$1" = "item" ] && [ "$2" = "list" ]; then
@@ -158,8 +158,8 @@ test('operator preflight checks the exact 1Password item before broad listing', 
     toolPath,
     'op',
     `#!/bin/sh
-if [ "$1" = "account" ] && [ "$2" = "list" ]; then
-  echo '[{"url":"example.1password.com","email":"operator@example.com"}]'
+if [ "$1" = "whoami" ]; then
+  echo '{"url":"example.1password.com","email":"operator@example.com"}'
   exit 0
 fi
 if [ "$1" = "item" ] && [ "$2" = "get" ] && [ "$3" = "New Afro Decap OAuth" ]; then

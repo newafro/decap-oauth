@@ -233,7 +233,7 @@ function collectOnePasswordFields(payload) {
 
 async function checkOnePassword() {
   section('1Password Item');
-  const account = await run('op', ['account', 'list', '--format=json'], {
+  const account = await run('op', ['whoami', '--format=json'], {
     timeout: 10000,
   });
 
