@@ -390,6 +390,13 @@ if (failures.length) {
   console.log('4. Run: RENDER_CUSTOM_DOMAIN_TARGET=[exact Render target] npm run setup:operator');
   console.log('5. Add Namecheap CNAME decap-oauth -> Render exact DNS target.');
   console.log('');
+  console.log('Operator links:');
+  console.log(`- GitHub OAuth app setup: ${githubOauthAppUrl}`);
+  console.log(`- OAuth repo secrets: ${githubSecretsUrl}`);
+  console.log(`- Render deploy from repo: ${renderDeployUrl}`);
+  console.log(`- Deploy config preflight: ${deployPreflightUrl}`);
+  console.log(`- Render/Namecheap runbook: ${runbookUrl}`);
+  console.log('');
   console.log('Manual fallback: npm run create:1password-item, then npm run sync:github-secrets.');
   writeStepSummary();
   process.exit(1);
